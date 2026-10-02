@@ -1,5 +1,7 @@
 package com.l101.volumefloat;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.graphics.Color;
@@ -7,6 +9,7 @@ import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.media.AudioManager;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.os.IBinder;
 import android.os.Looper;
 import android.view.Gravity;
@@ -30,6 +33,11 @@ public class VolumeFloatService extends Service {
 
     // 自动收起时间：2.5 秒
     private static final long AUTO_COLLAPSE_DELAY = 2500;
+
+    // 后台 watchdog：用于老旧 Android 设备上的异常恢复
+    private static final long WATCHDOG_INTERVAL = 5 * 60 * 1000L;
+    public static final String ACTION_WATCHDOG =
+            "com.l101.volumefloat.action.WATCHDOG";
 
     // 常驻按钮尺寸
     private static final int MAIN_SIZE = 48;
