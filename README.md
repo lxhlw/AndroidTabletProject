@@ -72,7 +72,7 @@ L101 Volume Float is a lightweight floating volume controller designed for legac
 | Item | Support |
 | --- | --- |
 | Android | 4.4.2 (API 19) |
-| CPU ABI | armeabi-v7a |
+| Tested device ABI | armeabi-v7a |
 | Tested screen | 800 × 1280 |
 | Package | `com.l101.volumefloat` |
 
@@ -114,7 +114,7 @@ Pushing to `main` or `master` automatically builds a Debug APK.
 
 Creating a version tag such as:
 
-`v0.21.0`
+`v0.21.2`
 
 automatically:
 
