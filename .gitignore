@@ -1,0 +1,11 @@
+# Build outputs
+.gradle/
+build/
+app/build/
+
+# Local signing files - NEVER commit these
+*.jks
+*.keystore
+release-keystore/
+*-keystore-base64.txt
+keystore.properties
