@@ -180,16 +180,16 @@ jobs:
 
           | Item | Value |
           | --- | --- |
-          | File | `L101VolumeFloat.apk` |
-          | Version | `$VERSION_NAME` |
-          | Version Code | `$VERSION_CODE` |
-          | Package | `$PACKAGE_NAME` |
-          | Minimum Android | API `$MIN_SDK` |
-          | Target Android | API `$TARGET_SDK` |
-          | CPU ABI | `$NATIVE_CODE` |
-          | File Size | `$APK_SIZE` ($APK_SIZE_BYTES bytes) |
-          | SHA-256 | `$SHA256` |
-          | Build Time | `$BUILD_DATE` |
+          | File | \`L101VolumeFloat.apk\` |
+          | Version | \`$VERSION_NAME\` |
+          | Version Code | \`$VERSION_CODE\` |
+          | Package | \`$PACKAGE_NAME\` |
+          | Minimum Android | API \`$MIN_SDK\` |
+          | Target Android | API \`$TARGET_SDK\` |
+          | CPU ABI | \`$NATIVE_CODE\` |
+          | File Size | \`$APK_SIZE\` ($APK_SIZE_BYTES bytes) |
+          | SHA-256 | \`$SHA256\` |
+          | Build Time | \`$BUILD_DATE\` |
 
           ### Download
 
@@ -204,11 +204,11 @@ jobs:
           **Later upgrades:** releases use the same signing key, so newer versions can be installed over the existing app without uninstalling it.
 
           **ADB installation:**
-          ```bat
+          \`\`\`bat
           adb install -r L101VolumeFloat.apk
-          ```
+          \`\`\`
 
-          **Package name:** `com.l101.volumefloat`
+          **Package name:** \`com.l101.volumefloat\`
           EOF
 
           cat release-notes.md
