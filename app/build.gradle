@@ -28,6 +28,32 @@ android {
     }
 
 
+    signingConfigs {
+
+        release {
+
+            if (project.hasProperty("RELEASE_STORE_FILE")) {
+
+                storeFile file(
+                        project.property("RELEASE_STORE_FILE")
+                )
+
+                storePassword project.property(
+                        "RELEASE_STORE_PASSWORD"
+                )
+
+                keyAlias project.property(
+                        "RELEASE_KEY_ALIAS"
+                )
+
+                keyPassword project.property(
+                        "RELEASE_KEY_PASSWORD"
+                )
+            }
+        }
+    }
+
+
     buildTypes {
 
 
@@ -41,6 +67,12 @@ android {
         release {
 
             minifyEnabled false
+
+            if (project.hasProperty("RELEASE_STORE_FILE")) {
+
+                signingConfig signingConfigs.release
+
+            }
 
         }
 
