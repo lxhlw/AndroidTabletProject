@@ -168,6 +168,30 @@ jobs:
 
           cat release-notes.md
 
+      - name: Generate GitHub changelog
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh api --method POST \
+            "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+            -f tag_name="$RELEASE_TAG" \
+            -f target_commitish="$GITHUB_SHA" \
+            > generated-release-notes.json
+
+          jq -r '.body // ""' generated-release-notes.json > generated-changelog.md
+
+          {
+            cat release-notes.md
+            echo
+            echo "---"
+            echo
+            echo "## What's Changed"
+            echo
+            cat generated-changelog.md
+          } > final-release-notes.md
+
       - name: Publish APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -176,12 +200,12 @@ jobs:
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" ./L101VolumeFloat.apk --clobber
-            gh release edit "$RELEASE_TAG" --notes-file release-notes.md
+            gh release edit "$RELEASE_TAG" --notes-file final-release-notes.md
           else
             gh release create "$RELEASE_TAG" \
               ./L101VolumeFloat.apk \
               --title "L101 Volume Float $RELEASE_TAG" \
-              --notes-file release-notes.md
+              --notes-file final-release-notes.md
           fi
 
       - name: Clean signing files
