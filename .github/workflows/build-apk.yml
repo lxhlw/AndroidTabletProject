@@ -6,6 +6,11 @@ on:
     branches:
       - main
       - master
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -52,8 +57,7 @@ jobs:
       # 6. 下载并准备官方 Gradle 4.10.3
       - name: Install Gradle 4.10.3
         run: |
-          curl -fsSL -o /tmp/gradle-4.10.3-bin.zip \
-            https://services.gradle.org/distributions/gradle-4.10.3-bin.zip
+          curl -fsSL -o /tmp/gradle-4.10.3-bin.zip             https://services.gradle.org/distributions/gradle-4.10.3-bin.zip
 
           unzip -q /tmp/gradle-4.10.3-bin.zip -d /tmp
 
@@ -70,9 +74,31 @@ jobs:
         run: |
           gradle assembleDebug --stacktrace --no-daemon
 
-      # 9. 上传 APK
-      - name: Upload APK
+      # 9. 复制成固定文件名，便于 Release 直接提供下载
+      - name: Prepare APK
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk ./L101VolumeFloat.apk
+          ls -lh ./L101VolumeFloat.apk
+
+      # 10. 继续保留 Actions Artifact
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v7
         with:
           name: L101VolumeFloat-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: L101VolumeFloat.apk
+
+      # 11. 只有推送 v* 标签时，自动创建 GitHub Release
+      # 例如：v0.19.0
+      - name: Publish APK to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists. Replacing APK asset..."
+            gh release upload "$RELEASE_TAG"               ./L101VolumeFloat.apk               --clobber
+          else
+            echo "Creating Release $RELEASE_TAG..."
+            gh release create "$RELEASE_TAG"               ./L101VolumeFloat.apk               --title "L101 Volume Float $RELEASE_TAG"               --generate-notes
+          fi
