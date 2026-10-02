@@ -4,6 +4,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.graphics.drawable.GradientDrawable;
 import android.media.AudioManager;
 import android.os.Handler;
 import android.os.IBinder;
@@ -12,23 +13,32 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 public class VolumeFloatService extends Service {
 
     private WindowManager windowManager;
     private LinearLayout panel;
 
-    private Button mainButton;
-    private Button plusButton;
-    private Button minusButton;
+    private TextView mainButton;
+    private TextView plusButton;
+    private TextView minusButton;
 
     private AudioManager audio;
     private WindowManager.LayoutParams params;
 
-    // 自动收起时间：3 秒
-    private static final long AUTO_COLLAPSE_DELAY = 3000;
+    // 自动收起时间：2.5 秒
+    private static final long AUTO_COLLAPSE_DELAY = 2500;
+
+    // 常驻按钮尺寸
+    private static final int MAIN_SIZE = 48;
+
+    // 展开后按钮尺寸
+    private static final int SMALL_SIZE = 48;
+
+    // 按钮间距
+    private static final int BUTTON_GAP = 4;
 
     private final Handler handler =
             new Handler(Looper.getMainLooper());
@@ -65,9 +75,9 @@ public class VolumeFloatService extends Service {
         windowManager =
                 (WindowManager) getSystemService(WINDOW_SERVICE);
 
-        // =========================
+        // ==========================================
         // 主面板
-        // =========================
+        // ==========================================
 
         panel = new LinearLayout(this);
 
@@ -76,86 +86,109 @@ public class VolumeFloatService extends Service {
         );
 
         panel.setGravity(
-                Gravity.CENTER_HORIZONTAL
+                Gravity.CENTER
         );
 
+        // 面板本身完全透明
         panel.setBackgroundColor(
-                Color.argb(160, 0, 0, 0)
+                Color.TRANSPARENT
         );
 
-        // =========================
+        // ==========================================
         // 主按钮
-        // =========================
+        // ==========================================
 
-        mainButton = new Button(this);
+        mainButton = createCircleButton(
+                "V",
+                MAIN_SIZE
+        );
 
-        // 平时屏幕上只显示这个按钮
-        mainButton.setText("V");
-
-        mainButton.setTextSize(18);
+        mainButton.setTextSize(14);
 
         panel.addView(
                 mainButton,
                 new LinearLayout.LayoutParams(
-                        100,
-                        80
+                        MAIN_SIZE,
+                        MAIN_SIZE
                 )
         );
 
-        // =========================
-        // + 按钮
-        // =========================
+        // ==========================================
+        // +
+        // ==========================================
 
-        plusButton = new Button(this);
-
-        plusButton.setText("+");
+        plusButton = createCircleButton(
+                "+",
+                SMALL_SIZE
+        );
 
         plusButton.setTextSize(20);
 
+        LinearLayout.LayoutParams plusParams =
+                new LinearLayout.LayoutParams(
+                        SMALL_SIZE,
+                        SMALL_SIZE
+                );
+
+        plusParams.topMargin = BUTTON_GAP;
+
         panel.addView(
                 plusButton,
-                new LinearLayout.LayoutParams(
-                        100,
-                        70
-                )
+                plusParams
         );
 
-        // =========================
-        // - 按钮
-        // =========================
+        // ==========================================
+        // -
+        // ==========================================
 
-        minusButton = new Button(this);
-
-        minusButton.setText("-");
+        minusButton = createCircleButton(
+                "-",
+                SMALL_SIZE
+        );
 
         minusButton.setTextSize(20);
 
+        LinearLayout.LayoutParams minusParams =
+                new LinearLayout.LayoutParams(
+                        SMALL_SIZE,
+                        SMALL_SIZE
+                );
+
+        minusParams.topMargin = BUTTON_GAP;
+
         panel.addView(
                 minusButton,
-                new LinearLayout.LayoutParams(
-                        100,
-                        70
-                )
+                minusParams
         );
 
-        // 初始状态：只显示主按钮
-        plusButton.setVisibility(View.GONE);
-        minusButton.setVisibility(View.GONE);
+        // ==========================================
+        // 初始只显示 V
+        // ==========================================
 
-        // =========================
-        // 窗口参数
-        // =========================
+        plusButton.setVisibility(
+                View.GONE
+        );
+
+        minusButton.setVisibility(
+                View.GONE
+        );
+
+        // ==========================================
+        // WindowManager 参数
+        // ==========================================
 
         params =
                 new WindowManager.LayoutParams();
 
-        params.width = 100;
+        params.width = MAIN_SIZE;
 
-        params.height = 80;
+        params.height = MAIN_SIZE;
 
         params.gravity =
                 Gravity.RIGHT |
                 Gravity.CENTER_VERTICAL;
+
+        params.x = 2;
 
         params.format =
                 PixelFormat.TRANSLUCENT;
@@ -166,11 +199,9 @@ public class VolumeFloatService extends Service {
         params.flags =
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
 
-        // =========================
+        // ==========================================
         // 主按钮
-        // 点击：展开/收起
-        // 拖动：移动悬浮窗
-        // =========================
+        // ==========================================
 
         setDragAndClickListener(
                 mainButton,
@@ -179,20 +210,17 @@ public class VolumeFloatService extends Service {
                     public void run() {
 
                         if (expanded) {
-
                             collapsePanel();
-
                         } else {
-
                             expandPanel();
                         }
                     }
                 }
         );
 
-        // =========================
-        // + 按钮
-        // =========================
+        // ==========================================
+        // +
+        // ==========================================
 
         setDragAndClickListener(
                 plusButton,
@@ -211,9 +239,9 @@ public class VolumeFloatService extends Service {
                 }
         );
 
-        // =========================
-        // - 按钮
-        // =========================
+        // ==========================================
+        // -
+        // ==========================================
 
         setDragAndClickListener(
                 minusButton,
@@ -232,9 +260,9 @@ public class VolumeFloatService extends Service {
                 }
         );
 
-        // =========================
+        // ==========================================
         // 添加悬浮窗
-        // =========================
+        // ==========================================
 
         windowManager.addView(
                 panel,
@@ -242,9 +270,67 @@ public class VolumeFloatService extends Service {
         );
     }
 
-    // =========================================================
-    // 设置“点击 + 拖动”监听
-    // =========================================================
+    // =====================================================
+    // 创建圆形按钮
+    // =====================================================
+
+    private TextView createCircleButton(
+            String text,
+            int size) {
+
+        TextView button =
+                new TextView(this);
+
+        button.setText(text);
+
+        button.setTextColor(
+                Color.WHITE
+        );
+
+        button.setGravity(
+                Gravity.CENTER
+        );
+
+        button.setIncludeFontPadding(
+                false
+        );
+
+        button.setBackground(
+                createCircleBackground()
+        );
+
+        return button;
+    }
+
+    // =====================================================
+    // 圆形半透明背景
+    // =====================================================
+
+    private GradientDrawable createCircleBackground() {
+
+        GradientDrawable drawable =
+                new GradientDrawable();
+
+        drawable.setShape(
+                GradientDrawable.OVAL
+        );
+
+        /*
+         * 黑色 + 约 55% 透明度
+         *
+         * 比之前的黑色矩形悬浮窗
+         * 更不遮挡画面。
+         */
+        drawable.setColor(
+                Color.argb(140, 0, 0, 0)
+        );
+
+        return drawable;
+    }
+
+    // =====================================================
+    // 点击 + 拖动
+    // =====================================================
 
     private void setDragAndClickListener(
             final View target,
@@ -262,8 +348,6 @@ public class VolumeFloatService extends Service {
 
                             case MotionEvent.ACTION_DOWN:
 
-                                // 用户开始操作时，
-                                // 暂停自动收起
                                 handler.removeCallbacks(
                                         autoCollapseRunnable
                                 );
@@ -305,11 +389,8 @@ public class VolumeFloatService extends Service {
                                     /*
                                      * Gravity.RIGHT：
                                      *
-                                     * 向右拖：
-                                     * x 减小
-                                     *
-                                     * 向左拖：
-                                     * x 增大
+                                     * 向右拖 -> x 减小
+                                     * 向左拖 -> x 增大
                                      */
 
                                     params.x =
@@ -330,14 +411,10 @@ public class VolumeFloatService extends Service {
 
                                 if (!moved) {
 
-                                    // 没有发生拖动
-                                    // 才认为是点击
                                     clickAction.run();
+
                                 } else {
 
-                                    // 拖动结束
-                                    // 如果当前已经展开，
-                                    // 重新开始自动收起倒计时
                                     if (expanded) {
                                         scheduleAutoCollapse();
                                     }
@@ -360,9 +437,9 @@ public class VolumeFloatService extends Service {
         );
     }
 
-    // =========================================================
+    // =====================================================
     // 展开
-    // =========================================================
+    // =====================================================
 
     private void expandPanel() {
 
@@ -376,9 +453,15 @@ public class VolumeFloatService extends Service {
                 View.VISIBLE
         );
 
-        params.width = 100;
+        params.width =
+                SMALL_SIZE;
 
-        params.height = 220;
+        params.height =
+                MAIN_SIZE
+                + SMALL_SIZE
+                + SMALL_SIZE
+                + BUTTON_GAP
+                + BUTTON_GAP;
 
         windowManager.updateViewLayout(
                 panel,
@@ -388,9 +471,9 @@ public class VolumeFloatService extends Service {
         scheduleAutoCollapse();
     }
 
-    // =========================================================
+    // =====================================================
     // 收起
-    // =========================================================
+    // =====================================================
 
     private void collapsePanel() {
 
@@ -408,9 +491,11 @@ public class VolumeFloatService extends Service {
                 View.GONE
         );
 
-        params.width = 100;
+        params.width =
+                MAIN_SIZE;
 
-        params.height = 80;
+        params.height =
+                MAIN_SIZE;
 
         windowManager.updateViewLayout(
                 panel,
@@ -418,9 +503,9 @@ public class VolumeFloatService extends Service {
         );
     }
 
-    // =========================================================
+    // =====================================================
     // 自动收起
-    // =========================================================
+    // =====================================================
 
     private void scheduleAutoCollapse() {
 
@@ -434,9 +519,9 @@ public class VolumeFloatService extends Service {
         );
     }
 
-    // =========================================================
+    // =====================================================
     // Service 销毁
-    // =========================================================
+    // =====================================================
 
     @Override
     public void onDestroy() {
