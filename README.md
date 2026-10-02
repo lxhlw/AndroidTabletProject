@@ -2,6 +2,8 @@
 
 A lightweight floating volume controller designed for legacy Android tablets.
 
+![Latest Release](https://img.shields.io/github/v/release/lxhlw/AndroidTabletProject?label=latest%20release&sort=semver)
+
 ## Features
 
 - Small floating volume button
@@ -25,12 +27,14 @@ A lightweight floating volume controller designed for legacy Android tablets.
 
 The latest APK is published automatically in the project's GitHub Releases.
 
-**Releases:**  
+**Download latest APK:**  
 https://github.com/lxhlw/AndroidTabletProject/releases/latest
 
 Look for:
 
 `L101VolumeFloat.apk`
+
+The version shown by the **Latest Release** badge above is read dynamically from the repository's latest GitHub Release, so the README does not need a manual version update.
 
 ## Build
 
@@ -68,8 +72,8 @@ Main components:
 - `VolumeFloatService`
 - `BootReceiver`
 
-## Current Stable Release
+## Release
 
-**v0.19.0**
+**Latest Release:** shown automatically by the badge at the top of this page.
 
 Automatic APK build and GitHub Release publishing are enabled.
