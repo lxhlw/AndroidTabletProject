@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="L101 Volume Float - Lightweight floating volume controller for legacy Android tablets.">
+  <title>L101 Volume Float</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --card: #171a21;
+      --card-2: #1d212a;
+      --text: #f5f7fa;
+      --muted: #aab2c0;
+      --line: #2a303b;
+      --accent: #4f8cff;
+      --accent-hover: #6a9eff;
+      --success: #48c78e;
+      --shadow: 0 18px 50px rgba(0,0,0,.25);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(79,140,255,.16), transparent 34rem),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    a { color: inherit; }
+
+    .container {
+      width: min(980px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 72px 0 42px;
+      text-align: center;
+    }
+
+    .app-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 20px;
+      border-radius: 22px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, #2b66d9, #5b91ff);
+      box-shadow: 0 12px 32px rgba(79,140,255,.28);
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -2px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.2rem, 6vw, 4rem);
+      line-height: 1.05;
+      letter-spacing: -.04em;
+    }
+
+    .subtitle {
+      margin: 16px auto 0;
+      max-width: 680px;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    .lang-switch {
+      display: inline-flex;
+      gap: 6px;
+      margin-top: 28px;
+      padding: 5px;
+      border: 1px solid var(--line);
+      background: rgba(23,26,33,.82);
+      border-radius: 999px;
+      backdrop-filter: blur(12px);
+    }
+
+    .lang-switch button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 18px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: .95rem;
+      transition: .2s ease;
+    }
+
+    .lang-switch button.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(79,140,255,.24);
+    }
+
+    main {
+      padding-bottom: 56px;
+    }
+
+    .hero-card {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 20px;
+      align-items: stretch;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: rgba(23,26,33,.9);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .release-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .eyebrow {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+
+    .version {
+      margin-top: 8px;
+      font-size: 2rem;
+      font-weight: 750;
+      letter-spacing: -.03em;
+    }
+
+    .release-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+      color: var(--success);
+      font-size: .9rem;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .button {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 46px;
+      padding: 0 18px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 650;
+      border: 1px solid var(--line);
+      background: var(--card-2);
+      transition: .2s ease;
+    }
+
+    .button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      color: #fff;
+    }
+
+    .button.secondary:hover {
+      background: var(--card-2);
+      border-color: #3b4453;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 1.45rem;
+      letter-spacing: -.02em;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .feature-list {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--muted);
+    }
+
+    .feature-list li + li {
+      margin-top: 8px;
+    }
+
+    .specs {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .specs td {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    .specs tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .specs td:first-child {
+      width: 42%;
+      color: var(--muted);
+    }
+
+    code {
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: #0c0e12;
+      border: 1px solid var(--line);
+      font-family: Consolas, "Courier New", monospace;
+      font-size: .9em;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: .93rem;
+    }
+
+    footer {
+      padding: 24px 0 48px;
+      color: var(--muted);
+      text-align: center;
+      font-size: .88rem;
+    }
+
+    [data-lang] { display: none; }
+    [data-lang="zh"] { display: block; }
+
+    body.en [data-lang="zh"] { display: none; }
+    body.en [data-lang="en"] { display: block; }
+
+    @media (max-width: 760px) {
+      header { padding-top: 48px; }
+      .hero-card, .grid { grid-template-columns: 1fr; }
+      .card { padding: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="app-icon">V</div>
+      <h1>L101 Volume Float</h1>
+
+      <div data-lang="zh" class="subtitle">
+        为老旧 Android 平板设计的轻量级悬浮音量控制工具。
+      </div>
+      <div data-lang="en" class="subtitle">
+        A lightweight floating volume controller designed for legacy Android tablets.
+      </div>
+
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button type="button" id="zhBtn" class="active">🇨🇳 中文</button>
+        <button type="button" id="enBtn">🇺🇸 English</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero-card">
+        <div class="card">
+          <div data-lang="zh">
+            <div class="eyebrow">项目简介</div>
+            <h2>简单、轻量、适合老设备</h2>
+            <p class="note">
+              专为 Android 4.4.2 老旧平板打造的悬浮音量控制工具。
+              常驻小型按钮，点击展开音量控制，支持拖动，并可在开机后自动启动。
+            </p>
+          </div>
+          <div data-lang="en">
+            <div class="eyebrow">About</div>
+            <h2>Simple, lightweight, built for legacy devices</h2>
+            <p class="note">
+              A floating volume controller for Android 4.4.2 tablets.
+              Keep a compact button on screen, expand it for volume controls, drag it anywhere, and start automatically after boot.
+            </p>
+          </div>
+
+          <div class="button-row">
+            <a id="downloadBtn" class="button primary" href="https://github.com/lxhlw/AndroidTabletProject/releases/latest">
+              下载最新 APK
+            </a>
+            <a class="button secondary" href="https://github.com/lxhlw/AndroidTabletProject" target="_blank" rel="noopener">
+              GitHub
+            </a>
+          </div>
+        </div>
+
+        <div class="card release-card">
+          <div>
+            <div data-lang="zh" class="eyebrow">最新 Release</div>
+            <div data-lang="en" class="eyebrow">Latest Release</div>
+            <div id="version" class="version">Loading…</div>
+            <div class="release-status">
+              <span class="dot"></span>
+              <span data-lang="zh">自动发布 APK</span>
+              <span data-lang="en">Automatic APK release</span>
+            </div>
+          </div>
+          <div class="note">
+            <span data-lang="zh">最新版本号和 APK 下载地址会自动从 GitHub Release 获取。</span>
+            <span data-lang="en">The latest version and APK download link are fetched automatically from GitHub Releases.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="card">
+          <div data-lang="zh">
+            <h2>功能</h2>
+            <ul class="feature-list">
+              <li>小型悬浮音量按钮</li>
+              <li>点击展开 <code>+</code> / <code>-</code></li>
+              <li>直接调节系统音量</li>
+              <li>悬浮按钮自由拖动</li>
+              <li>短时间无操作自动收起</li>
+              <li>平板开机后自动启动</li>
+            </ul>
+          </div>
+          <div data-lang="en">
+            <h2>Features</h2>
+            <ul class="feature-list">
+              <li>Small floating volume button</li>
+              <li>Tap to expand <code>+</code> / <code>-</code></li>
+              <li>Adjust system volume directly</li>
+              <li>Drag the floating control anywhere</li>
+              <li>Automatically collapses after inactivity</li>
+              <li>Starts automatically after device boot</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <div data-lang="zh">
+            <h2>兼容性</h2>
+            <table class="specs">
+              <tr><td>Android</td><td>4.4.2（API 19）</td></tr>
+              <tr><td>CPU ABI</td><td>armeabi-v7a</td></tr>
+              <tr><td>屏幕</td><td>800 × 1280（已测试）</td></tr>
+              <tr><td>包名</td><td><code>com.l101.volumefloat</code></td></tr>
+            </table>
+          </div>
+          <div data-lang="en">
+            <h2>Compatibility</h2>
+            <table class="specs">
+              <tr><td>Android</td><td>4.4.2 (API 19)</td></tr>
+              <tr><td>CPU ABI</td><td>armeabi-v7a</td></tr>
+              <tr><td>Screen</td><td>800 × 1280 tested</td></tr>
+              <tr><td>Package</td><td><code>com.l101.volumefloat</code></td></tr>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div data-lang="zh">
+          <h2>构建与发布</h2>
+          <p class="note">
+            向 <code>main</code> 或 <code>master</code> 提交代码时会自动编译 APK。
+            创建 <code>v0.20.0</code> 这类版本标签后，会自动创建 GitHub Release 并上传 <code>L101VolumeFloat.apk</code>。
+          </p>
+          <p class="note">
+            Windows 本地构建脚本：<code>build_apk.bat</code>
+          </p>
+        </div>
+        <div data-lang="en">
+          <h2>Build & Release</h2>
+          <p class="note">
+            Pushing to <code>main</code> or <code>master</code> automatically builds the APK.
+            Creating a version tag such as <code>v0.20.0</code> automatically creates a GitHub Release and uploads <code>L101VolumeFloat.apk</code>.
+          </p>
+          <p class="note">
+            Local Windows build script: <code>build_apk.bat</code>
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <a href="https://github.com/lxhlw/AndroidTabletProject" target="_blank" rel="noopener">AndroidTabletProject</a>
+      · <span id="year"></span>
+    </footer>
+  </div>
+
+  <script>
+    const repo = "lxhlw/AndroidTabletProject";
+    const versionEl = document.getElementById("version");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const zhBtn = document.getElementById("zhBtn");
+    const enBtn = document.getElementById("enBtn");
+
+    function setLanguage(lang) {
+      document.body.classList.toggle("en", lang === "en");
+      zhBtn.classList.toggle("active", lang === "zh");
+      enBtn.classList.toggle("active", lang === "en");
+      document.documentElement.lang = lang === "en" ? "en" : "zh-CN";
+      downloadBtn.textContent = lang === "en" ? "Download latest APK" : "下载最新 APK";
+      localStorage.setItem("l101-language", lang);
+    }
+
+    zhBtn.addEventListener("click", () => setLanguage("zh"));
+    enBtn.addEventListener("click", () => setLanguage("en"));
+
+    const savedLang = localStorage.getItem("l101-language");
+    if (savedLang === "en") setLanguage("en");
+
+    async function loadLatestRelease() {
+      try {
+        const response = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
+          headers: { "Accept": "application/vnd.github+json" }
+        });
+
+        if (!response.ok) throw new Error("Release API returned " + response.status);
+
+        const release = await response.json();
+        versionEl.textContent = release.tag_name || "Latest";
+
+        const apk = (release.assets || []).find(asset => asset.name.toLowerCase().endsWith(".apk"));
+        if (apk && apk.browser_download_url) {
+          downloadBtn.href = apk.browser_download_url;
+        } else if (release.html_url) {
+          downloadBtn.href = release.html_url;
+        }
+      } catch (error) {
+        versionEl.textContent = "Latest";
+        downloadBtn.href = `https://github.com/${repo}/releases/latest`;
+      }
+    }
+
+    document.getElementById("year").textContent = new Date().getFullYear();
+    loadLatestRelease();
+  </script>
+</body>
+</html>
