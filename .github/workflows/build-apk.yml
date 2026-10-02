@@ -52,6 +52,7 @@ jobs:
       # 6. 使用项目自带 Gradle Wrapper
       - name: Prepare Gradle Wrapper
         run: |
+          sed -i 's/\r$//' gradlew
           chmod +x gradlew
           ./gradlew --version
 
