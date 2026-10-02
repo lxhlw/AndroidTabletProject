@@ -15,7 +15,7 @@ A lightweight floating volume controller designed for legacy Android tablets.
   <img src="https://img.shields.io/github/actions/workflow/status/lxhlw/AndroidTabletProject/build-apk.yml?branch=main&label=Build" alt="Build Status">
   <img src="https://img.shields.io/github/v/release/lxhlw/AndroidTabletProject?label=Latest%20Release&sort=semver" alt="Latest Release">
   <img src="https://img.shields.io/badge/Android-4.4.2%20%7C%20API%2019-3ddc84" alt="Android 4.4.2">
-  <img src="https://img.shields.io/badge/ABI-armeabi--v7a-3ddc84" alt="armeabi-v7a">
+  <img src="https://img.shields.io/badge/Tested%20ABI-armeabi--v7a-3ddc84" alt="Tested ABI: armeabi-v7a">
 </p>
 
 ## 🇨🇳 中文
@@ -39,7 +39,7 @@ L101 Volume Float 是一款为老旧 Android 平板设计的轻量级悬浮音�
 | 项目 | 支持 |
 | --- | --- |
 | Android | 4.4.2（API 19） |
-| CPU ABI | armeabi-v7a |
+| Tested device ABI | armeabi-v7a |
 | 测试屏幕 | 800 × 1280 |
 | 包名 | `com.l101.volumefloat` |
 
@@ -126,7 +126,13 @@ automatically:
 
 ### Windows
 
-The local script `build_apk.bat` builds a Debug APK using Gradle 4.10.3. It downloads Gradle automatically when needed.
+The repository includes the standard Gradle Wrapper, so a Debug APK can be built with:
+
+```bat
+gradlew.bat assembleDebug
+```
+
+The convenience script `build_apk.bat` is also available; it downloads Gradle 4.10.3 automatically when needed.
 
 A local build requires **JDK 8**.
 
