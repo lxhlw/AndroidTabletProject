@@ -12,6 +12,7 @@ A lightweight floating volume controller designed for legacy Android tablets.
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/github/actions/workflow/status/lxhlw/AndroidTabletProject/build-apk.yml?branch=main&label=Build" alt="Build Status">
   <img src="https://img.shields.io/github/v/release/lxhlw/AndroidTabletProject?label=Latest%20Release&sort=semver" alt="Latest Release">
   <img src="https://img.shields.io/badge/Android-4.4.2%20%7C%20API%2019-3ddc84" alt="Android 4.4.2">
   <img src="https://img.shields.io/badge/ABI-armeabi--v7a-3ddc84" alt="armeabi-v7a">
