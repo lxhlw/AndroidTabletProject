@@ -98,18 +98,26 @@ All official Release APKs use the same signing key. New versions can therefore b
 
 ### ADB
 
-For test APK installation, first remove the existing copy, then install the new APK:
+For official Release APK installation or upgrade:
+
+```bat
+adb install -r L101VolumeFloat.apk
+```
+
+Package:
+
+`com.l101.volumefloat`
+
+### Test APK
+
+Debug/Test APKs are signed with a different certificate from official Release APKs. Before installing a test APK, remove the currently installed copy:
 
 ```bat
 adb uninstall com.l101.volumefloat
 adb install L101VolumeFloat.apk
 ```
 
-The uninstall step is required when the test APK uses a different signing certificate from the currently installed version.
-
-Package:
-
-`com.l101.volumefloat`
+Use this method only for test/debug APKs. After testing, uninstall the test APK before installing the official Release APK if Android reports a signature mismatch.
 
 ## Build & Release
 
