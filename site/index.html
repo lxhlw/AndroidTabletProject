@@ -332,9 +332,23 @@
               <span data-lang="en">Automatic APK release</span>
             </div>
           </div>
-          <div class="note">
-            <span data-lang="zh">最新版本号和 APK 下载地址会自动从 GitHub Release 获取。</span>
-            <span data-lang="en">The latest version and APK download link are fetched automatically from GitHub Releases.</span>
+
+          <div>
+            <div class="note">
+              <span data-lang="zh">版本号和 APK 下载地址会自动从 GitHub Release 获取。</span>
+              <span data-lang="en">The version and APK download link are fetched automatically from GitHub Releases.</span>
+            </div>
+
+            <div class="button-row">
+              <a id="releaseBtn" class="button secondary" href="https://github.com/lxhlw/AndroidTabletProject/releases/latest" target="_blank" rel="noopener">
+                查看 Release
+              </a>
+            </div>
+
+            <div id="downloadStatus" class="note" style="margin-top:10px">
+              <span data-lang="zh">正在检查最新 APK…</span>
+              <span data-lang="en">Checking the latest APK…</span>
+            </div>
           </div>
         </div>
       </section>
@@ -421,6 +435,8 @@
     const repo = "lxhlw/AndroidTabletProject";
     const versionEl = document.getElementById("version");
     const downloadBtn = document.getElementById("downloadBtn");
+    const releaseBtn = document.getElementById("releaseBtn");
+    const downloadStatus = document.getElementById("downloadStatus");
     const zhBtn = document.getElementById("zhBtn");
     const enBtn = document.getElementById("enBtn");
 
@@ -430,6 +446,7 @@
       enBtn.classList.toggle("active", lang === "en");
       document.documentElement.lang = lang === "en" ? "en" : "zh-CN";
       downloadBtn.textContent = lang === "en" ? "Download latest APK" : "下载最新 APK";
+      releaseBtn.textContent = lang === "en" ? "View Release" : "查看 Release";
       localStorage.setItem("l101-language", lang);
     }
 
@@ -448,17 +465,32 @@
         if (!response.ok) throw new Error("Release API returned " + response.status);
 
         const release = await response.json();
-        versionEl.textContent = release.tag_name || "Latest";
+        const releaseUrl = release.html_url || `https://github.com/${repo}/releases/latest`;
 
-        const apk = (release.assets || []).find(asset => asset.name.toLowerCase().endsWith(".apk"));
+        versionEl.textContent = release.tag_name || "Latest";
+        releaseBtn.href = releaseUrl;
+
+        const apk = (release.assets || []).find(asset => asset.name.toLowerCase() === "l101volumefloat.apk");
+
         if (apk && apk.browser_download_url) {
           downloadBtn.href = apk.browser_download_url;
-        } else if (release.html_url) {
-          downloadBtn.href = release.html_url;
+          downloadStatus.innerHTML =
+            '<span data-lang="zh">已找到最新 APK，可直接下载。</span>' +
+            '<span data-lang="en">Latest APK found and ready to download.</span>';
+        } else if (releaseUrl) {
+          downloadBtn.href = releaseUrl;
+          downloadStatus.innerHTML =
+            '<span data-lang="zh">当前 Release 暂未找到 APK，请查看 Release Assets。</span>' +
+            '<span data-lang="en">No APK asset was found in the current Release. Open Release Assets.</span>';
         }
       } catch (error) {
         versionEl.textContent = "Latest";
-        downloadBtn.href = `https://github.com/${repo}/releases/latest`;
+        const fallback = `https://github.com/${repo}/releases/latest`;
+        downloadBtn.href = fallback;
+        releaseBtn.href = fallback;
+        downloadStatus.innerHTML =
+          '<span data-lang="zh">无法读取最新版本，请打开 Release 查看。</span>' +
+          '<span data-lang="en">Unable to load the latest release. Open Releases to check.</span>';
       }
     }
 
