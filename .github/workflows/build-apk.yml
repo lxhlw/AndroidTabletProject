@@ -164,6 +164,19 @@ jobs:
           **[Download L101VolumeFloat.apk](https://github.com/lxhlw/AndroidTabletProject/releases/download/${{ github.ref_name }}/L101VolumeFloat.apk)**
 
           This APK is automatically built and signed by GitHub Actions for the tagged release.
+
+          ### Installation / Upgrade
+
+          **First installation:** install the APK normally on the Android 4.4.2 device. If an older copy signed with a different certificate is already installed, uninstall the old copy first.
+
+          **Later upgrades:** releases use the same signing key, so newer versions can be installed over the existing app without uninstalling it.
+
+          **ADB installation:**
+          ```bat
+          adb install -r L101VolumeFloat.apk
+          ```
+
+          **Package name:** `com.l101.volumefloat`
           EOF
 
           cat release-notes.md
