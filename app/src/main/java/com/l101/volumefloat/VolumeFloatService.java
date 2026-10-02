@@ -5,7 +5,9 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.media.AudioManager;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -17,8 +19,21 @@ public class VolumeFloatService extends Service {
 
     private WindowManager windowManager;
     private LinearLayout panel;
+
+    private Button mainButton;
+    private Button plusButton;
+    private Button minusButton;
+
     private AudioManager audio;
     private WindowManager.LayoutParams params;
+
+    // 自动收起时间：3 秒
+    private static final long AUTO_COLLAPSE_DELAY = 3000;
+
+    private final Handler handler =
+            new Handler(Looper.getMainLooper());
+
+    private boolean expanded = false;
 
     // 拖动相关
     private float downRawX;
@@ -27,11 +42,20 @@ public class VolumeFloatService extends Service {
     private int downY;
     private boolean moved;
 
+    private final Runnable autoCollapseRunnable =
+            new Runnable() {
+                @Override
+                public void run() {
+                    collapsePanel();
+                }
+            };
+
     @Override
     public void onCreate() {
         super.onCreate();
 
-        audio = (AudioManager) getSystemService(AUDIO_SERVICE);
+        audio =
+                (AudioManager) getSystemService(AUDIO_SERVICE);
 
         createFloatButton();
     }
@@ -41,56 +65,93 @@ public class VolumeFloatService extends Service {
         windowManager =
                 (WindowManager) getSystemService(WINDOW_SERVICE);
 
+        // =========================
+        // 主面板
+        // =========================
+
         panel = new LinearLayout(this);
-        panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setBackgroundColor(Color.argb(160, 0, 0, 0));
 
-        Button plus = new Button(this);
-        plus.setText("+");
-
-        Button minus = new Button(this);
-        minus.setText("-");
-
-        panel.addView(
-                plus,
-                new LinearLayout.LayoutParams(90, 80)
+        panel.setOrientation(
+                LinearLayout.VERTICAL
         );
 
-        panel.addView(
-                minus,
-                new LinearLayout.LayoutParams(90, 80)
+        panel.setGravity(
+                Gravity.CENTER_HORIZONTAL
         );
 
-        // + 按钮：使用系统默认音量流
-        plus.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        panel.setBackgroundColor(
+                Color.argb(160, 0, 0, 0)
+        );
 
-                audio.adjustSuggestedStreamVolume(
-                        AudioManager.ADJUST_RAISE,
-                        AudioManager.USE_DEFAULT_STREAM_TYPE,
-                        AudioManager.FLAG_SHOW_UI
-                );
-            }
-        });
+        // =========================
+        // 主按钮
+        // =========================
 
-        // - 按钮：使用系统默认音量流
-        minus.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        mainButton = new Button(this);
 
-                audio.adjustSuggestedStreamVolume(
-                        AudioManager.ADJUST_LOWER,
-                        AudioManager.USE_DEFAULT_STREAM_TYPE,
-                        AudioManager.FLAG_SHOW_UI
-                );
-            }
-        });
+        // 平时屏幕上只显示这个按钮
+        mainButton.setText("V");
 
-        params = new WindowManager.LayoutParams();
+        mainButton.setTextSize(18);
+
+        panel.addView(
+                mainButton,
+                new LinearLayout.LayoutParams(
+                        100,
+                        80
+                )
+        );
+
+        // =========================
+        // + 按钮
+        // =========================
+
+        plusButton = new Button(this);
+
+        plusButton.setText("+");
+
+        plusButton.setTextSize(20);
+
+        panel.addView(
+                plusButton,
+                new LinearLayout.LayoutParams(
+                        100,
+                        70
+                )
+        );
+
+        // =========================
+        // - 按钮
+        // =========================
+
+        minusButton = new Button(this);
+
+        minusButton.setText("-");
+
+        minusButton.setTextSize(20);
+
+        panel.addView(
+                minusButton,
+                new LinearLayout.LayoutParams(
+                        100,
+                        70
+                )
+        );
+
+        // 初始状态：只显示主按钮
+        plusButton.setVisibility(View.GONE);
+        minusButton.setVisibility(View.GONE);
+
+        // =========================
+        // 窗口参数
+        // =========================
+
+        params =
+                new WindowManager.LayoutParams();
 
         params.width = 100;
-        params.height = 170;
+
+        params.height = 80;
 
         params.gravity =
                 Gravity.RIGHT |
@@ -105,12 +166,91 @@ public class VolumeFloatService extends Service {
         params.flags =
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
 
-        /*
-         * 拖动逻辑：
-         * 轻点 = 点击
-         * 按住移动 = 拖动悬浮窗
-         */
-        View.OnTouchListener dragListener =
+        // =========================
+        // 主按钮
+        // 点击：展开/收起
+        // 拖动：移动悬浮窗
+        // =========================
+
+        setDragAndClickListener(
+                mainButton,
+                new Runnable() {
+                    @Override
+                    public void run() {
+
+                        if (expanded) {
+
+                            collapsePanel();
+
+                        } else {
+
+                            expandPanel();
+                        }
+                    }
+                }
+        );
+
+        // =========================
+        // + 按钮
+        // =========================
+
+        setDragAndClickListener(
+                plusButton,
+                new Runnable() {
+                    @Override
+                    public void run() {
+
+                        audio.adjustSuggestedStreamVolume(
+                                AudioManager.ADJUST_RAISE,
+                                AudioManager.USE_DEFAULT_STREAM_TYPE,
+                                AudioManager.FLAG_SHOW_UI
+                        );
+
+                        scheduleAutoCollapse();
+                    }
+                }
+        );
+
+        // =========================
+        // - 按钮
+        // =========================
+
+        setDragAndClickListener(
+                minusButton,
+                new Runnable() {
+                    @Override
+                    public void run() {
+
+                        audio.adjustSuggestedStreamVolume(
+                                AudioManager.ADJUST_LOWER,
+                                AudioManager.USE_DEFAULT_STREAM_TYPE,
+                                AudioManager.FLAG_SHOW_UI
+                        );
+
+                        scheduleAutoCollapse();
+                    }
+                }
+        );
+
+        // =========================
+        // 添加悬浮窗
+        // =========================
+
+        windowManager.addView(
+                panel,
+                params
+        );
+    }
+
+    // =========================================================
+    // 设置“点击 + 拖动”监听
+    // =========================================================
+
+    private void setDragAndClickListener(
+            final View target,
+            final Runnable clickAction) {
+
+        target.setOnTouchListener(
                 new View.OnTouchListener() {
 
                     @Override
@@ -122,11 +262,23 @@ public class VolumeFloatService extends Service {
 
                             case MotionEvent.ACTION_DOWN:
 
-                                downRawX = event.getRawX();
-                                downRawY = event.getRawY();
+                                // 用户开始操作时，
+                                // 暂停自动收起
+                                handler.removeCallbacks(
+                                        autoCollapseRunnable
+                                );
 
-                                downX = params.x;
-                                downY = params.y;
+                                downRawX =
+                                        event.getRawX();
+
+                                downRawY =
+                                        event.getRawY();
+
+                                downX =
+                                        params.x;
+
+                                downY =
+                                        params.y;
 
                                 moved = false;
 
@@ -151,9 +303,13 @@ public class VolumeFloatService extends Service {
                                 if (moved) {
 
                                     /*
-                                     * 使用 Gravity.RIGHT：
-                                     * 向右拖动 -> x 减小
-                                     * 向左拖动 -> x 增大
+                                     * Gravity.RIGHT：
+                                     *
+                                     * 向右拖：
+                                     * x 减小
+                                     *
+                                     * 向左拖：
+                                     * x 增大
                                      */
 
                                     params.x =
@@ -173,42 +329,136 @@ public class VolumeFloatService extends Service {
                             case MotionEvent.ACTION_UP:
 
                                 if (!moved) {
-                                    v.performClick();
+
+                                    // 没有发生拖动
+                                    // 才认为是点击
+                                    clickAction.run();
+                                } else {
+
+                                    // 拖动结束
+                                    // 如果当前已经展开，
+                                    // 重新开始自动收起倒计时
+                                    if (expanded) {
+                                        scheduleAutoCollapse();
+                                    }
                                 }
 
                                 return true;
 
                             case MotionEvent.ACTION_CANCEL:
 
+                                if (expanded) {
+                                    scheduleAutoCollapse();
+                                }
+
                                 return true;
                         }
 
                         return true;
                     }
-                };
+                }
+        );
+    }
 
-        plus.setOnTouchListener(dragListener);
-        minus.setOnTouchListener(dragListener);
+    // =========================================================
+    // 展开
+    // =========================================================
 
-        windowManager.addView(
+    private void expandPanel() {
+
+        expanded = true;
+
+        plusButton.setVisibility(
+                View.VISIBLE
+        );
+
+        minusButton.setVisibility(
+                View.VISIBLE
+        );
+
+        params.width = 100;
+
+        params.height = 220;
+
+        windowManager.updateViewLayout(
+                panel,
+                params
+        );
+
+        scheduleAutoCollapse();
+    }
+
+    // =========================================================
+    // 收起
+    // =========================================================
+
+    private void collapsePanel() {
+
+        expanded = false;
+
+        handler.removeCallbacks(
+                autoCollapseRunnable
+        );
+
+        plusButton.setVisibility(
+                View.GONE
+        );
+
+        minusButton.setVisibility(
+                View.GONE
+        );
+
+        params.width = 100;
+
+        params.height = 80;
+
+        windowManager.updateViewLayout(
                 panel,
                 params
         );
     }
 
+    // =========================================================
+    // 自动收起
+    // =========================================================
+
+    private void scheduleAutoCollapse() {
+
+        handler.removeCallbacks(
+                autoCollapseRunnable
+        );
+
+        handler.postDelayed(
+                autoCollapseRunnable,
+                AUTO_COLLAPSE_DELAY
+        );
+    }
+
+    // =========================================================
+    // Service 销毁
+    // =========================================================
+
     @Override
     public void onDestroy() {
 
-        super.onDestroy();
+        handler.removeCallbacks(
+                autoCollapseRunnable
+        );
 
         if (panel != null &&
             windowManager != null) {
 
             try {
-                windowManager.removeView(panel);
+
+                windowManager.removeView(
+                        panel
+                );
+
             } catch (Exception ignored) {
             }
         }
+
+        super.onDestroy();
     }
 
     @Override
