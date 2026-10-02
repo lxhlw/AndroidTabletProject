@@ -252,6 +252,63 @@
       font-size: .93rem;
     }
 
+    .install-details {
+      margin: 20px 0;
+    }
+
+    .install-details summary {
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .install-details summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .install-details summary::after {
+      content: "+";
+      color: var(--muted);
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+
+    .install-details[open] summary::after {
+      content: "−";
+    }
+
+    .install-content {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .install-step + .install-step {
+      margin-top: 16px;
+    }
+
+    .install-step strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .install-code {
+      margin-top: 10px;
+      padding: 12px 14px;
+      overflow-x: auto;
+      border-radius: 10px;
+      background: #0c0e12;
+      border: 1px solid var(--line);
+      font-family: Consolas, "Courier New", monospace;
+      font-size: .9rem;
+      color: var(--text);
+    }
+
     footer {
       padding: 24px 0 48px;
       color: var(--muted);
@@ -400,6 +457,61 @@
           </div>
         </div>
       </section>
+
+      <details class="card install-details">
+        <summary>
+          <span data-lang="zh">安装说明</span>
+          <span data-lang="en">Installation Guide</span>
+        </summary>
+
+        <div class="install-content">
+          <div data-lang="zh">
+            <div class="install-step">
+              <strong>首次安装</strong>
+              下载最新的 <code>L101VolumeFloat.apk</code>，直接在 Android 4.4.2 平板上安装。
+            </div>
+
+            <div class="install-step">
+              <strong>旧版升级</strong>
+              如果已经安装过同一 Release 签名的旧版本，直接安装新版本即可，无需卸载。
+            </div>
+
+            <div class="install-step">
+              <strong>如果提示签名不一致</strong>
+              说明设备上的旧版本使用了不同签名。先卸载旧版本，再安装新的正式 Release APK。
+            </div>
+
+            <div class="install-step">
+              <strong>ADB 安装</strong>
+              将 APK 放在电脑当前目录后执行：
+              <div class="install-code">adb install -r L101VolumeFloat.apk</div>
+            </div>
+          </div>
+
+          <div data-lang="en">
+            <div class="install-step">
+              <strong>First installation</strong>
+              Download <code>L101VolumeFloat.apk</code> and install it normally on the Android 4.4.2 tablet.
+            </div>
+
+            <div class="install-step">
+              <strong>Upgrading</strong>
+              Official Release APKs use the same signing key, so later versions can be installed directly over the existing app.
+            </div>
+
+            <div class="install-step">
+              <strong>If Android reports a signature mismatch</strong>
+              The installed copy was signed with a different certificate. Uninstall the old copy first, then install the new official Release APK.
+            </div>
+
+            <div class="install-step">
+              <strong>ADB installation</strong>
+              Put the APK in the current computer directory and run:
+              <div class="install-code">adb install -r L101VolumeFloat.apk</div>
+            </div>
+          </div>
+        </div>
+      </details>
 
       <section class="card">
         <div data-lang="zh">
