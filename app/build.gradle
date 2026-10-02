@@ -27,11 +27,6 @@ android {
         versionName appVersionName
 
 
-        ndk {
-            abiFilters "armeabi-v7a"
-        }
-
-
     }
 
 
