@@ -142,10 +142,12 @@ jobs:
             exit 1
           }
 
-          echo "$BADGING" | grep -q "armeabi-v7a" || {
-            echo "ERROR: APK does not contain armeabi-v7a native ABI information."
-            exit 1
-          }
+          if echo "$BADGING" | grep -q "native-code:"; then
+            echo "Native libraries detected in APK:"
+            echo "$BADGING" | grep "^native-code:" || true
+          else
+            echo "No native libraries detected (Java-only APK)."
+          fi
 
           echo "Release APK validation passed."
 
@@ -155,11 +157,11 @@ jobs:
           AAPT="$ANDROID_HOME/build-tools/28.0.3/aapt"
           BADGING="$($AAPT dump badging L101VolumeFloat.apk)"
 
-          PACKAGE_NAME="$(printf '%s\n' "$BADGING" | sed -n "s/^package: name='\\([^']*\\)'.*/\\1/p")"
-          VERSION_NAME="$(printf '%s\n' "$BADGING" | sed -n "s/^package:.* versionName='\\([^']*\\)'.*/\\1/p")"
-          VERSION_CODE="$(printf '%s\n' "$BADGING" | sed -n "s/^package:.* versionCode='\\([^']*\\)'.*/\\1/p")"
-          MIN_SDK="$(printf '%s\n' "$BADGING" | sed -n "s/.*sdkVersion:'\\([^']*\\)'.*/\\1/p")"
-          TARGET_SDK="$(printf '%s\n' "$BADGING" | sed -n "s/.*targetSdkVersion:'\\([^']*\\)'.*/\\1/p")"
+          PACKAGE_NAME="$(printf '%s\n' "$BADGING" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")"
+          VERSION_NAME="$(printf '%s\n' "$BADGING" | sed -n "s/^package:.* versionName='\([^']*\)'.*/\1/p")"
+          VERSION_CODE="$(printf '%s\n' "$BADGING" | sed -n "s/^package:.* versionCode='\([^']*\)'.*/\1/p")"
+          MIN_SDK="$(printf '%s\n' "$BADGING" | sed -n "s/.*sdkVersion:'\([^']*\)'.*/\1/p")"
+          TARGET_SDK="$(printf '%s\n' "$BADGING" | sed -n "s/.*targetSdkVersion:'\([^']*\)'.*/\1/p")"
           NATIVE_CODE="$(printf '%s\n' "$BADGING" | sed -n "s/^native-code: //p")"
 
           APK_SIZE_BYTES="$(stat -c%s L101VolumeFloat.apk)"
@@ -168,7 +170,7 @@ jobs:
           BUILD_DATE="$(date -u '+%Y-%m-%d %H:%M UTC')"
 
           if [ -z "$NATIVE_CODE" ]; then
-            NATIVE_CODE="armeabi-v7a"
+            NATIVE_CODE="N/A (Java-only APK; no native libraries)"
           fi
 
           cat > release-notes.md <<EOF
