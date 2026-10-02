@@ -14,10 +14,17 @@ android {
 
         targetSdkVersion 26
 
+        def appVersionCode = project.hasProperty("APP_VERSION_CODE")
+                ? Integer.valueOf(project.property("APP_VERSION_CODE"))
+                : 1
 
-        versionCode 1
+        def appVersionName = project.hasProperty("APP_VERSION_NAME")
+                ? project.property("APP_VERSION_NAME").toString()
+                : "1.0"
 
-        versionName "1.0"
+        versionCode appVersionCode
+
+        versionName appVersionName
 
 
         ndk {
