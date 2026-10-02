@@ -98,9 +98,14 @@ All official Release APKs use the same signing key. New versions can therefore b
 
 ### ADB
 
+For test APK installation, first remove the existing copy, then install the new APK:
+
 ```bat
-adb install -r L101VolumeFloat.apk
+adb uninstall com.l101.volumefloat
+adb install L101VolumeFloat.apk
 ```
+
+The uninstall step is required when the test APK uses a different signing certificate from the currently installed version.
 
 Package:
 
