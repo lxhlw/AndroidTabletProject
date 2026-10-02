@@ -61,48 +61,29 @@ public class VolumeFloatService extends Service {
                 new LinearLayout.LayoutParams(90, 80)
         );
 
-        // + 按钮
+        // + 按钮：使用系统默认音量流
         plus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                int current =
-                        audio.getStreamVolume(
-                                AudioManager.STREAM_MUSIC
-                        );
-
-                int max =
-                        audio.getStreamMaxVolume(
-                                AudioManager.STREAM_MUSIC
-                        );
-
-                if (current < max) {
-                    audio.setStreamVolume(
-                            AudioManager.STREAM_MUSIC,
-                            current + 1,
-                            0
-                    );
-                }
+                audio.adjustSuggestedStreamVolume(
+                        AudioManager.ADJUST_RAISE,
+                        AudioManager.USE_DEFAULT_STREAM_TYPE,
+                        AudioManager.FLAG_SHOW_UI
+                );
             }
         });
 
-        // - 按钮
+        // - 按钮：使用系统默认音量流
         minus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                int current =
-                        audio.getStreamVolume(
-                                AudioManager.STREAM_MUSIC
-                        );
-
-                if (current > 0) {
-                    audio.setStreamVolume(
-                            AudioManager.STREAM_MUSIC,
-                            current - 1,
-                            0
-                    );
-                }
+                audio.adjustSuggestedStreamVolume(
+                        AudioManager.ADJUST_LOWER,
+                        AudioManager.USE_DEFAULT_STREAM_TYPE,
+                        AudioManager.FLAG_SHOW_UI
+                );
             }
         });
 
@@ -125,14 +106,10 @@ public class VolumeFloatService extends Service {
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
 
         /*
-         * 给两个按钮加入拖动逻辑。
-         *
-         * 因为 OnTouchListener 返回 true，
-         * 所以按钮不会自己触发 click，
-         * 因此在没有发生拖动的 ACTION_UP 时
-         * 手动调用 performClick()。
+         * 拖动逻辑：
+         * 轻点 = 点击
+         * 按住移动 = 拖动悬浮窗
          */
-
         View.OnTouchListener dragListener =
                 new View.OnTouchListener() {
 
@@ -174,9 +151,9 @@ public class VolumeFloatService extends Service {
                                 if (moved) {
 
                                     /*
-                                     * gravity=RIGHT 时：
-                                     * 向右拖 -> x 减小
-                                     * 向左拖 -> x 增大
+                                     * 使用 Gravity.RIGHT：
+                                     * 向右拖动 -> x 减小
+                                     * 向左拖动 -> x 增大
                                      */
 
                                     params.x =
