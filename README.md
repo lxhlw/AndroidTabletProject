@@ -125,11 +125,11 @@ automatically:
 
 ### Windows
 
-Local build script:
+The local script `build_apk.bat` builds a Debug APK using Gradle 4.10.3. It downloads Gradle automatically when needed.
 
-`build_apk.bat`
+A local build requires **JDK 8**.
 
-The project uses the legacy Android/Gradle toolchain required by the target device.
+Official signed Release APKs should be downloaded from GitHub Releases.
 
 ## Project
 
