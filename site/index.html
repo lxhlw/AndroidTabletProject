@@ -482,9 +482,16 @@
             </div>
 
             <div class="install-step">
-              <strong>ADB 安装</strong>
-              将 APK 放在电脑当前目录后执行：
+              <strong>正式版 ADB 安装</strong>
+              正式 Release APK 可以直接覆盖安装：
               <div class="install-code">adb install -r L101VolumeFloat.apk</div>
+            </div>
+
+            <div class="install-step">
+              <strong>测试版 ADB 安装</strong>
+              测试/Debug APK 与正式 Release APK 使用不同签名。安装测试版前先卸载当前版本：
+              <div class="install-code">adb uninstall com.l101.volumefloat<br>adb install L101VolumeFloat.apk</div>
+              测试完成后，如需安装正式版，若系统提示签名不一致，请先卸载测试版。
             </div>
           </div>
 
@@ -505,9 +512,16 @@
             </div>
 
             <div class="install-step">
-              <strong>ADB installation</strong>
-              Put the APK in the current computer directory and run:
+              <strong>Official Release ADB installation</strong>
+              Official Release APKs can be installed directly over the existing version:
               <div class="install-code">adb install -r L101VolumeFloat.apk</div>
+            </div>
+
+            <div class="install-step">
+              <strong>Test APK ADB installation</strong>
+              Test/Debug APKs use a different signing certificate from official Release APKs. Uninstall the current version first:
+              <div class="install-code">adb uninstall com.l101.volumefloat<br>adb install L101VolumeFloat.apk</div>
+              After testing, if Android reports a signature mismatch when installing the official Release APK, uninstall the test APK first.
             </div>
           </div>
         </div>
