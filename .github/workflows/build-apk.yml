@@ -119,6 +119,55 @@ jobs:
           name: L101VolumeFloat-apk
           path: L101VolumeFloat.apk
 
+      - name: Generate APK release information
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          AAPT="$ANDROID_HOME/build-tools/28.0.3/aapt"
+          BADGING="$($AAPT dump badging L101VolumeFloat.apk)"
+
+          PACKAGE_NAME="$(printf '%s\n' "$BADGING" | sed -n "s/^package: name='\\([^']*\\)'.*/\\1/p")"
+          VERSION_NAME="$(printf '%s\n' "$BADGING" | sed -n "s/^package:.* versionName='\\([^']*\\)'.*/\\1/p")"
+          VERSION_CODE="$(printf '%s\n' "$BADGING" | sed -n "s/^package:.* versionCode='\\([^']*\\)'.*/\\1/p")"
+          MIN_SDK="$(printf '%s\n' "$BADGING" | sed -n "s/.*sdkVersion:'\\([^']*\\)'.*/\\1/p")"
+          TARGET_SDK="$(printf '%s\n' "$BADGING" | sed -n "s/.*targetSdkVersion:'\\([^']*\\)'.*/\\1/p")"
+          NATIVE_CODE="$(printf '%s\n' "$BADGING" | sed -n "s/^native-code: //p")"
+
+          APK_SIZE_BYTES="$(stat -c%s L101VolumeFloat.apk)"
+          APK_SIZE="$(du -h L101VolumeFloat.apk | cut -f1)"
+          SHA256="$(sha256sum L101VolumeFloat.apk | awk '{print $1}')"
+          BUILD_DATE="$(date -u '+%Y-%m-%d %H:%M UTC')"
+
+          if [ -z "$NATIVE_CODE" ]; then
+            NATIVE_CODE="armeabi-v7a"
+          fi
+
+          cat > release-notes.md <<EOF
+          ## L101 Volume Float $VERSION_NAME
+
+          ### APK
+
+          | Item | Value |
+          | --- | --- |
+          | File | `L101VolumeFloat.apk` |
+          | Version | `$VERSION_NAME` |
+          | Version Code | `$VERSION_CODE` |
+          | Package | `$PACKAGE_NAME` |
+          | Minimum Android | API `$MIN_SDK` |
+          | Target Android | API `$TARGET_SDK` |
+          | CPU ABI | `$NATIVE_CODE` |
+          | File Size | `$APK_SIZE` ($APK_SIZE_BYTES bytes) |
+          | SHA-256 | `$SHA256` |
+          | Build Time | `$BUILD_DATE` |
+
+          ### Download
+
+          **[Download L101VolumeFloat.apk](https://github.com/lxhlw/AndroidTabletProject/releases/download/${{ github.ref_name }}/L101VolumeFloat.apk)**
+
+          This APK is automatically built and signed by GitHub Actions for the tagged release.
+          EOF
+
+          cat release-notes.md
+
       - name: Publish APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -127,8 +176,12 @@ jobs:
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" ./L101VolumeFloat.apk --clobber
+            gh release edit "$RELEASE_TAG" --notes-file release-notes.md
           else
-            gh release create "$RELEASE_TAG" ./L101VolumeFloat.apk --title "L101 Volume Float $RELEASE_TAG" --generate-notes
+            gh release create "$RELEASE_TAG" \
+              ./L101VolumeFloat.apk \
+              --title "L101 Volume Float $RELEASE_TAG" \
+              --notes-file release-notes.md
           fi
 
       - name: Clean signing files
