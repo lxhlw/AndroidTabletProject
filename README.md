@@ -2,7 +2,7 @@
 
 A lightweight floating volume controller designed for legacy Android tablets.
 
-**🇺🇸 English** · [🇨🇳 中文](README.zh-CN.md)
+**[🌐 Official Project Website](https://lxhlw.github.io/AndroidTabletProject/)** · **[📦 Latest APK](https://github.com/lxhlw/AndroidTabletProject/releases/latest)**
 
 ![Latest Release](https://img.shields.io/github/v/release/lxhlw/AndroidTabletProject?label=latest%20release&sort=semver)
 
@@ -78,3 +78,7 @@ Main components:
 **Latest Release:** shown automatically by the badge at the top of this page.
 
 Automatic APK build and GitHub Release publishing are enabled.
+
+## Language
+
+The full bilingual project page with in-page language switching is available on the **[Official Project Website](https://lxhlw.github.io/AndroidTabletProject/)**.
