@@ -119,6 +119,36 @@ jobs:
           name: L101VolumeFloat-apk
           path: L101VolumeFloat.apk
 
+      - name: Validate Release APK
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          AAPT="$ANDROID_HOME/build-tools/28.0.3/aapt"
+          APKSIGNER="$ANDROID_HOME/build-tools/28.0.3/apksigner"
+
+          test -s L101VolumeFloat.apk
+
+          echo "Checking APK signature..."
+          "$APKSIGNER" verify --verbose L101VolumeFloat.apk
+
+          BADGING="$($AAPT dump badging L101VolumeFloat.apk)"
+
+          echo "$BADGING" | grep -q "package: name='com.l101.volumefloat'" || {
+            echo "ERROR: Unexpected package name."
+            exit 1
+          }
+
+          echo "$BADGING" | grep -q "sdkVersion:'19'" || {
+            echo "ERROR: APK minimum SDK is not API 19."
+            exit 1
+          }
+
+          echo "$BADGING" | grep -q "armeabi-v7a" || {
+            echo "ERROR: APK does not contain armeabi-v7a native ABI information."
+            exit 1
+          }
+
+          echo "Release APK validation passed."
+
       - name: Generate APK release information
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
