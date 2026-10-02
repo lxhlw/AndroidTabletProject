@@ -186,7 +186,7 @@ jobs:
           | Package | \`$PACKAGE_NAME\` |
           | Minimum Android | API \`$MIN_SDK\` |
           | Target Android | API \`$TARGET_SDK\` |
-          | CPU ABI | \`$NATIVE_CODE\` |
+          | Native libraries | \`$NATIVE_CODE\` |
           | File Size | \`$APK_SIZE\` ($APK_SIZE_BYTES bytes) |
           | SHA-256 | \`$SHA256\` |
           | Build Time | \`$BUILD_DATE\` |
