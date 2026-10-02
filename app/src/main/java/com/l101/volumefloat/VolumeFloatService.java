@@ -36,8 +36,13 @@ public class VolumeFloatService extends Service {
 
     // 后台 watchdog：用于老旧 Android 设备上的异常恢复
     private static final long WATCHDOG_INTERVAL = 5 * 60 * 1000L;
+    private static final long TASK_REMOVED_RESTART_DELAY = 1500L;
+
     public static final String ACTION_WATCHDOG =
             "com.l101.volumefloat.action.WATCHDOG";
+
+    public static final String ACTION_RESTART_AFTER_TASK_REMOVED =
+            "com.l101.volumefloat.action.RESTART_AFTER_TASK_REMOVED";
 
     // 常驻按钮尺寸
     private static final int MAIN_SIZE = 48;
@@ -76,9 +81,27 @@ public class VolumeFloatService extends Service {
                 (AudioManager) getSystemService(AUDIO_SERVICE);
 
         createFloatButton();
+        scheduleWatchdog(this);
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        ensureFloatButton();
+        scheduleWatchdog(this);
+        return START_STICKY;
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        scheduleRestartAfterTaskRemoved(this);
+        super.onTaskRemoved(rootIntent);
     }
 
     private void createFloatButton() {
+
+        if (panel != null) {
+            return;
+        }
 
         windowManager =
                 (WindowManager) getSystemService(WINDOW_SERVICE);
@@ -275,6 +298,105 @@ public class VolumeFloatService extends Service {
         windowManager.addView(
                 panel,
                 params
+        );
+    }
+
+    // =====================================================
+    // 检查并恢复悬浮窗
+    // =====================================================
+
+    private void ensureFloatButton() {
+
+        if (panel == null || panel.getWindowToken() == null) {
+
+            if (panel != null) {
+                try {
+                    windowManager.removeView(panel);
+                } catch (Exception ignored) {
+                }
+            }
+
+            panel = null;
+            mainButton = null;
+            plusButton = null;
+            minusButton = null;
+            params = null;
+            expanded = false;
+
+            try {
+                createFloatButton();
+            } catch (Exception ignored) {
+                panel = null;
+                mainButton = null;
+                plusButton = null;
+                minusButton = null;
+                params = null;
+            }
+        }
+    }
+
+    // =====================================================
+    // 后台 watchdog
+    // =====================================================
+
+    public static void scheduleWatchdog(android.content.Context context) {
+
+        AlarmManager alarmManager =
+                (AlarmManager) context.getSystemService(ALARM_SERVICE);
+
+        if (alarmManager == null) {
+            return;
+        }
+
+        Intent intent =
+                new Intent(context, BootReceiver.class);
+
+        intent.setAction(ACTION_WATCHDOG);
+
+        PendingIntent pendingIntent =
+                PendingIntent.getBroadcast(
+                        context,
+                        101,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT
+                );
+
+        alarmManager.setInexactRepeating(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + WATCHDOG_INTERVAL,
+                WATCHDOG_INTERVAL,
+                pendingIntent
+        );
+    }
+
+    public static void scheduleRestartAfterTaskRemoved(
+            android.content.Context context) {
+
+        AlarmManager alarmManager =
+                (AlarmManager) context.getSystemService(ALARM_SERVICE);
+
+        if (alarmManager == null) {
+            return;
+        }
+
+        Intent intent =
+                new Intent(context, BootReceiver.class);
+
+        intent.setAction(ACTION_RESTART_AFTER_TASK_REMOVED);
+
+        PendingIntent pendingIntent =
+                PendingIntent.getBroadcast(
+                        context,
+                        102,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT
+                );
+
+        alarmManager.setExact(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime()
+                        + TASK_REMOVED_RESTART_DELAY,
+                pendingIntent
         );
     }
 
