@@ -20,6 +20,7 @@ package="com.l101.volumefloat">
 <intent-filter>
 <action android:name="android.intent.action.BOOT_COMPLETED"/>
 <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+<action android:name="com.l101.volumefloat.action.WATCHDOG"/>
 </intent-filter>
 </receiver>
 
