@@ -61,7 +61,7 @@ jobs:
             echo "ERROR: Release tag must look like v0.20.0"
             exit 1
           fi
-          VERSION_CODE=$((1000000 + $(date -u +%s) / 60))
+          VERSION_CODE=$((1000000 + $(date -u +%s)))
           echo "APP_VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "APP_VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
