@@ -15,62 +15,62 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-22.04
-
     steps:
-      # 1. 拉取项目
       - name: Checkout source
         uses: actions/checkout@v7
 
-      # 2. 先安装 JDK 17
-      # setup-android / sdkmanager 需要 JDK 17+
       - name: Setup JDK 17
         uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Check JDK 17
-        run: java -version
-
-      # 3. 配置 Android SDK
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
 
-      # 4. 安装项目需要的 Android SDK
       - name: Install Android SDK packages
         run: |
           sdkmanager "platform-tools"
           sdkmanager "platforms;android-28"
           sdkmanager "build-tools;28.0.3"
 
-      # 5. 切换回 JDK 8
-      # 老项目 Gradle 4.10.3 / AGP 3.2.1 使用 JDK 8
       - name: Switch to JDK 8
         uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '8'
 
-      - name: Check JDK 8
-        run: java -version
-
-      # 6. 下载并准备官方 Gradle 4.10.3
       - name: Install Gradle 4.10.3
         run: |
-          curl -fsSL -o /tmp/gradle-4.10.3-bin.zip \
-            https://services.gradle.org/distributions/gradle-4.10.3-bin.zip
-
+          curl -fsSL -o /tmp/gradle-4.10.3-bin.zip https://services.gradle.org/distributions/gradle-4.10.3-bin.zip
           unzip -q /tmp/gradle-4.10.3-bin.zip -d /tmp
-
           echo "/tmp/gradle-4.10.3/bin" >> "$GITHUB_PATH"
 
-      # 7. 检查 Gradle
       - name: Check Gradle
         run: |
           java -version
           gradle --version
 
-      # 8. 只在版本标签构建正式 Release APK
+      - name: Set release version
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          VERSION_NAME="${RELEASE_TAG#v}"
+          if ! echo "$VERSION_NAME" | grep -Eq '^[0-9]+\.[0-9]+(\.[0-9]+)?$'; then
+            echo "ERROR: Release tag must look like v0.20.0"
+            exit 1
+          fi
+          VERSION_CODE=$((1000000 + $(date -u +%s) / 60))
+          echo "APP_VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "APP_VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+
+      - name: Set debug version
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: |
+          echo "APP_VERSION_NAME=dev" >> "$GITHUB_ENV"
+          echo "APP_VERSION_CODE=1" >> "$GITHUB_ENV"
+
       - name: Prepare release keystore
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -80,14 +80,10 @@ jobs:
             echo "ERROR: L101_RELEASE_KEYSTORE_BASE64 is not configured."
             exit 1
           fi
-
           mkdir -p release-keystore
-
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode >             release-keystore/l101-volume-release.jks
-
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > release-keystore/l101-volume-release.jks
           test -s release-keystore/l101-volume-release.jks
 
-      # 9. 版本标签 -> 正式签名 Release
       - name: Build signed Release APK
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -95,16 +91,17 @@ jobs:
           ORG_GRADLE_PROJECT_RELEASE_STORE_PASSWORD: ${{ secrets.L101_RELEASE_KEYSTORE_PASSWORD }}
           ORG_GRADLE_PROJECT_RELEASE_KEY_ALIAS: ${{ secrets.L101_RELEASE_KEY_ALIAS }}
           ORG_GRADLE_PROJECT_RELEASE_KEY_PASSWORD: ${{ secrets.L101_RELEASE_KEY_PASSWORD }}
-        run: |
-          gradle assembleRelease --stacktrace --no-daemon
+          ORG_GRADLE_PROJECT_APP_VERSION_NAME: ${{ env.APP_VERSION_NAME }}
+          ORG_GRADLE_PROJECT_APP_VERSION_CODE: ${{ env.APP_VERSION_CODE }}
+        run: gradle assembleRelease --stacktrace --no-daemon
 
-      # 10. 普通 main/master 提交 -> 继续构建 Debug
       - name: Build Debug APK
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        run: |
-          gradle assembleDebug --stacktrace --no-daemon
+        env:
+          ORG_GRADLE_PROJECT_APP_VERSION_NAME: ${{ env.APP_VERSION_NAME }}
+          ORG_GRADLE_PROJECT_APP_VERSION_CODE: ${{ env.APP_VERSION_CODE }}
+        run: gradle assembleDebug --stacktrace --no-daemon
 
-      # 11. 准备统一 APK 文件名
       - name: Prepare APK
         env:
           IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
@@ -114,17 +111,14 @@ jobs:
           else
             cp app/build/outputs/apk/debug/app-debug.apk ./L101VolumeFloat.apk
           fi
-
           ls -lh ./L101VolumeFloat.apk
 
-      # 12. 保留 Actions Artifact
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v7
         with:
           name: L101VolumeFloat-apk
           path: L101VolumeFloat.apk
 
-      # 13. 版本标签 -> 自动发布 Release
       - name: Publish APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -132,15 +126,11 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Release $RELEASE_TAG already exists. Replacing APK asset..."
-            gh release upload "$RELEASE_TAG"               ./L101VolumeFloat.apk               --clobber
+            gh release upload "$RELEASE_TAG" ./L101VolumeFloat.apk --clobber
           else
-            echo "Creating Release $RELEASE_TAG..."
-            gh release create "$RELEASE_TAG"               ./L101VolumeFloat.apk               --title "L101 Volume Float $RELEASE_TAG"               --generate-notes
+            gh release create "$RELEASE_TAG" ./L101VolumeFloat.apk --title "L101 Volume Float $RELEASE_TAG" --generate-notes
           fi
 
-      # 14. 删除 runner 上的临时签名文件
       - name: Clean signing files
         if: always() && startsWith(github.ref, 'refs/tags/v')
-        run: |
-          rm -f release-keystore/l101-volume-release.jks
+        run: rm -f release-keystore/l101-volume-release.jks
