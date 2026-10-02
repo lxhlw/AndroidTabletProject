@@ -49,19 +49,28 @@ jobs:
       - name: Check JDK 8
         run: java -version
 
-      # 6. 使用项目自带 Gradle Wrapper
-      - name: Prepare Gradle Wrapper
+      # 6. 下载并准备官方 Gradle 4.10.3
+      - name: Install Gradle 4.10.3
         run: |
-          sed -i 's/\r$//' gradlew
-          chmod +x gradlew
-          ./gradlew --version
+          curl -fsSL -o /tmp/gradle-4.10.3-bin.zip \
+            https://services.gradle.org/distributions/gradle-4.10.3-bin.zip
 
-      # 7. 编译 APK
+          unzip -q /tmp/gradle-4.10.3-bin.zip -d /tmp
+
+          echo "/tmp/gradle-4.10.3/bin" >> "$GITHUB_PATH"
+
+      # 7. 检查 Gradle
+      - name: Check Gradle
+        run: |
+          java -version
+          gradle --version
+
+      # 8. 编译 APK
       - name: Build Debug APK
         run: |
-          ./gradlew assembleDebug --stacktrace --no-daemon
+          gradle assembleDebug --stacktrace --no-daemon
 
-      # 8. 上传 APK
+      # 9. 上传 APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
