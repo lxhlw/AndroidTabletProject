@@ -152,3 +152,33 @@ if (!fallbackResult?.url || fallbackResult.source !== 'tx') {
 }
 
 console.log('✓ LX automatic fallback switches from failed wy to tx')
+
+const searchPluginFetch = async (input, init = {}) => {
+  const url = String(input)
+  if (!url.includes('/api/lx-search')) return fakeResponse({ code: 200 })
+  const source = new URL(url).searchParams.get('source')
+  if (source === 'qq') {
+    return fakeResponse({
+      data: [
+        { id: 'tx-1', title: '晴天', name: '晴天', artist: '周杰伦', singer: '周杰伦', album: '叶惠美', albumName: '叶惠美', songmid: 'tx-1' },
+      ],
+    })
+  }
+  throw new Error('simulated source unavailable: ' + source)
+}
+
+const searchPlugin = buildLXPlugin(sourceCode, {
+  pluginFetch: searchPluginFetch,
+  requireFn: (name) => { throw new Error('unexpected require: ' + name) },
+  console: fakeConsole,
+})
+
+const searchResult = await searchPlugin.search('周杰伦', 1, 'music')
+if (!Array.isArray(searchResult?.data) || searchResult.data.length < 1) {
+  throw new Error('LX search aggregation dropped the successful QQ source')
+}
+if (searchResult.data[0].subSource !== 'tx') {
+  throw new Error('LX search aggregation returned the wrong primary source')
+}
+
+console.log('✓ LX search aggregation keeps successful sources when others fail')
