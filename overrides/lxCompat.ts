@@ -205,7 +205,7 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
             'hires': '999',
           }
           const br = brMap[quality] || '128'
-          const compatUrl = LX_COMPAT_API + '/api/why-url?source=' + encodeURIComponent(source)
+          const compatUrl = LX_COMPAT_API + '/api/lx-url?source=' + encodeURIComponent(source)
             + '&id=' + encodeURIComponent(id)
             + '&br=' + encodeURIComponent(br)
           const compatResponse = await deps.pluginFetch(compatUrl, { method: 'GET', cache: 'no-store' })
