@@ -187,7 +187,7 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
           clearTimeout(initTimer)
           initTimer = null
         }
-        if (initPayload?.status && initPayload?.sources) initResolve?.(initPayload)
+        if (initPayload?.sources && initPayload?.status !== false) initResolve?.(initPayload)
         else initReject?.(new Error('LX 音源初始化失败'))
       }
       for (const handler of events[event] || []) {
@@ -243,7 +243,7 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
   pluginFunc(...argValues)
 
   const getInit = async () => {
-    if (initPayload?.status && initPayload?.sources) return initPayload
+    if (initPayload?.sources && initPayload?.status !== false) return initPayload
     return await initReady
   }
 
