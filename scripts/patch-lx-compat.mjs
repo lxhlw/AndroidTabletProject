@@ -36,16 +36,24 @@ let musicApp = readFileSync(musicAppPath, 'utf8')
 const validationStart = musicApp.indexOf("  // 代理把上游錯誤也當內容回傳");
 const validationEnd = musicApp.indexOf("  return code", validationStart);
 if (validationStart < 0 || validationEnd < 0) throw new Error('LX patch: plugin validation markers not found');
-const validationBlock = [
-  "  // 代理把上游錯誤也當內容回傳，這裡確認真的是插件碼而不是錯誤頁",
-  "  const isCommonJSPlugin = code.includes('module.exports') || code.includes('exports.')",
-  "  const hasLXNamespace = /(?:globalThis|window)(?:\\.lx|\\[\\s*['"]lx['"]\\s*\\])/.test(code)",
-  "  const hasLXInitEvent = /EVENT_NAMES(?:\\.inited|\\[\\s*['"]inited['"]\\s*\\])/.test(code) || /['"]inited['"]/.test(code)",
-  "  const isLXMusicSource = hasLXNamespace && hasLXInitEvent",
-  "  if (!isCommonJSPlugin && !isLXMusicSource) {",
-  "    throw new Error(t('回應不是插件代碼（可能是上游錯誤頁）'))",
-  "  }",
-].join('\\n') + "\n";
+const validationBlock = `  // 代理把上游錯誤也當內容回傳，這裡確認真的是插件碼而不是錯誤頁
+  const isCommonJSPlugin = code.includes('module.exports') || code.includes('exports.')
+  const hasLXNamespace =
+    code.includes('globalThis.lx')
+    || code.includes("globalThis['lx']")
+    || code.includes('globalThis["lx"]')
+    || code.includes('window.lx')
+    || code.includes("window['lx']")
+    || code.includes('window["lx"]')
+  const hasLXInitEvent =
+    code.includes('EVENT_NAMES.inited')
+    || code.includes("EVENT_NAMES['inited']")
+    || code.includes('EVENT_NAMES["inited"]')
+  const isLXMusicSource = hasLXNamespace && hasLXInitEvent
+  if (!isCommonJSPlugin && !isLXMusicSource) {
+    throw new Error(t('回應不是插件代碼（可能是上游錯誤頁）'))
+  }
+`;
 musicApp = musicApp.slice(0, validationStart) + validationBlock + musicApp.slice(validationEnd);
 writeFileSync(musicAppPath, musicApp)
 
