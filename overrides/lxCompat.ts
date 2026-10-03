@@ -208,11 +208,36 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
           response.headers.forEach((value, key) => { responseHeaders[key] = value })
         } catch {}
 
-        callback(null, {
-          body: parsedBody,
-          statusCode: response.status,
-          headers: responseHeaders,
+        const rawBytes = new TextEncoder().encode(bodyText)
+        const raw = Object.assign(new Uint8Array(rawBytes), {
+          toString(encoding?: string) {
+            if (!encoding || encoding === 'utf8' || encoding === 'utf-8') return bodyText
+            if (encoding === 'base64') {
+              let binary = ''
+              for (const b of rawBytes) binary += String.fromCharCode(b)
+              return btoa(binary)
+            }
+            if (encoding === 'hex') {
+              return Array.from(rawBytes, b => b.toString(16).padStart(2, '0')).join('')
+            }
+            if (encoding === 'binary' || encoding === 'latin1') {
+              return Array.from(rawBytes, b => String.fromCharCode(b)).join('')
+            }
+            return bodyText
+          },
         })
+
+        const responseObject = {
+          statusCode: response.status,
+          statusMessage: '',
+          headers: responseHeaders,
+          bytes: rawBytes.length,
+          raw,
+          body: parsedBody,
+        }
+
+        // 与官方 LX request() 保持相同的回调形态：callback(err, response, body)
+        callback(null, responseObject, parsedBody)
       }).catch((err: any) => callback(err))
     },
 
