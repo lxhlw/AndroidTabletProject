@@ -296,16 +296,16 @@ if (!index.includes("case '/api/lx-search':")) {
   if (at < 0) throw new Error('LX patch: why-search route marker not found')
 
   const route = [
-    "    case '/api/lx-url': {
-      const source = (url.searchParams.get('source') || '').toLowerCase()
-      const id = url.searchParams.get('id') || ''
-      const br = parseInt(url.searchParams.get('br') || '128', 10) || 128
-      if (!id) return jsonResponse({ error: 'Missing id parameter' }, 400)
-      if (!/^(qq|tx)$/.test(source)) return jsonResponse({ error: 'Unsupported LX URL source: ' + source }, 400)
-      return jsonResponse({ url: await lxDirectMusicUrl(source, id, br) })
-    }
-
-    case '/api/lx-search': {",
+    "    case '/api/lx-url': {",
+    "      const source = (url.searchParams.get('source') || '').toLowerCase()",
+    "      const id = url.searchParams.get('id') || ''",
+    "      const br = parseInt(url.searchParams.get('br') || '128', 10) || 128",
+    "      if (!id) return jsonResponse({ error: 'Missing id parameter' }, 400)",
+    "      if (!/^(qq|tx)$/.test(source)) return jsonResponse({ error: 'Unsupported LX URL source: ' + source }, 400)",
+    "      return jsonResponse({ url: await lxDirectMusicUrl(source, id, br) })",
+    "    }",
+    "",
+    "    case '/api/lx-search': {",
     "      const source = url.searchParams.get('source') || ''",
     "      const keyword = url.searchParams.get('q') || ''",
     "      const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10) || 1)",
