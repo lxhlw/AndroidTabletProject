@@ -131,12 +131,46 @@ try {
 
   await page.getByRole('button', { name: '搜尋', exact: true }).last().click()
   const searchBox = page.getByPlaceholder('歌曲、歌手或專輯', { exact: true })
-  await searchBox.fill('周杰伦')
+  await searchBox.fill('晴天')
   await page.getByRole('button', { name: '搜尋', exact: true }).first().click()
 
-  await page.waitForFunction(() => document.body.innerText.includes('周杰伦'), null, { timeout: 60000 })
+  await page.waitForFunction(() => document.body.innerText.includes('晴天'), null, { timeout: 60000 })
   console.log('✓ Restored LX source participated in a real production search')
-  console.log('✓ LX browser E2E passed: install → persist → reload → search')
+
+  let lxUrlResolved = false
+  const lxUrlResponses = []
+  page.on('response', (response) => {
+    if (!response.url().includes('/api/lx-url')) return
+    lxUrlResponses.push({ status: response.status(), url: response.url() })
+    if (response.ok()) lxUrlResolved = true
+  })
+
+  // Click the deterministic SixYin result and require the LX URL bridge to resolve.
+  const sunnyDay = page.getByText('晴天', { exact: true }).first()
+  await sunnyDay.click()
+  await page.waitForFunction(() => {
+    const audios = Array.from(document.querySelectorAll('audio'))
+    return audios.some((audio) => Boolean(audio.currentSrc))
+      && Boolean(document.body.innerText.includes('晴天'))
+  }, null, { timeout: 60000 })
+
+  if (!lxUrlResolved && lxUrlResponses.length === 0) {
+    throw new Error('Playing the SixYin result did not reach the production LX URL bridge')
+  }
+
+  await page.waitForFunction(() => {
+    const audios = Array.from(document.querySelectorAll('audio'))
+    return audios.some((audio) => {
+      if (!audio.currentSrc) return false
+      return audio.currentSrc.includes('/api/proxy?url=')
+        || audio.currentSrc.startsWith('https://')
+        || audio.currentSrc.startsWith('http://')
+    })
+  }, null, { timeout: 60000 })
+
+  console.log('✓ SixYin result triggered the real production LX URL bridge')
+  console.log('✓ Player received a resolved playback URL')
+  console.log('✓ LX browser E2E passed: install → persist → reload → search → play')
 } finally {
   await browser.close()
 }
