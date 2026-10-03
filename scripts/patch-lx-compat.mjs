@@ -253,6 +253,24 @@ if (!why.includes('async function searchWhyMusicPlatform(')) {
     '  throw new Error("Unsupported LX source: " + source)',
     '}',
     '',
+    'async function lxDirectMusicUrl(source, songmid, bitrate = 128) {',
+    '  const src = String(source || "").toLowerCase()',
+    '  const id = String(songmid || "")',
+    '  if (!id) throw new Error("Missing LX song id")',
+    '  if (src !== "qq" && src !== "tx") throw new Error("Unsupported LX URL source: " + source)',
+    '  const br = Number(bitrate) || 128',
+    '  const filename = br >= 320 ? "M800.mp3" : "M500.mp3"',
+    '  const body = { queryvkey: { method: "CgiGetVkey", module: "vkey.GetVkeyServer", param: { checklimit: 0, ctx: 1, downloadfrom: 0, uin: "0", filename: [filename], guid: "0", songmid: [id] } } }',
+    '  const endpoint = "https://u.y.qq.com/cgi-bin/musicu.fcg?data=" + encodeURIComponent(JSON.stringify(body))',
+    '  const resp = await fetch(endpoint, { headers: { "User-Agent": "QQMusic 14090508(android 12)", "Accept": "application/json" } })',
+    '  if (!resp.ok) throw new Error("QQMusic vkey HTTP " + resp.status)',
+    '  const data = await resp.json()',
+    '  const list = data?.req_0?.data?.midurlinfo || data?.queryvkey?.data?.midurlinfo || data?.data?.midurlinfo || []',
+    '  const item = Array.isArray(list) ? (list.find(x => x?.purl) || list[0]) : null',
+    '  if (!item?.purl) throw new Error("QQMusic vkey returned no playable URL")',
+    '  return String(item.purl).startsWith("http") ? String(item.purl) : "https://isure6.stream.qqmusic.qq.com/" + String(item.purl)',
+    '}',
+    '',
     'async function searchWhyMusicPlatform(source, keyword, page = 1, count = 20) {',
     '  return lxDirectSearch(source, keyword, page, count)',
     '}'
@@ -260,7 +278,9 @@ if (!why.includes('async function searchWhyMusicPlatform(')) {
   why = why.slice(0, at) + helper + why.slice(at)
 }
 if (!why.includes('  searchWhyMusicPlatform,\n')) {
-  why = why.replace('  recommendWhyMusic,\n', '  recommendWhyMusic,\n  searchWhyMusicPlatform,\n')
+  why = why.replace('  recommendWhyMusic,\n', '  recommendWhyMusic,\n  searchWhyMusicPlatform,\n  lxDirectMusicUrl,\n')
+} else if (!why.includes('  lxDirectMusicUrl,\n')) {
+  why = why.replace('  searchWhyMusicPlatform,\n', '  searchWhyMusicPlatform,\n  lxDirectMusicUrl,\n')
 }
 writeFileSync(whyPath, why)
 
@@ -276,7 +296,16 @@ if (!index.includes("case '/api/lx-search':")) {
   if (at < 0) throw new Error('LX patch: why-search route marker not found')
 
   const route = [
-    "    case '/api/lx-search': {",
+    "    case '/api/lx-url': {
+      const source = (url.searchParams.get('source') || '').toLowerCase()
+      const id = url.searchParams.get('id') || ''
+      const br = parseInt(url.searchParams.get('br') || '128', 10) || 128
+      if (!id) return jsonResponse({ error: 'Missing id parameter' }, 400)
+      if (!/^(qq|tx)$/.test(source)) return jsonResponse({ error: 'Unsupported LX URL source: ' + source }, 400)
+      return jsonResponse({ url: await lxDirectMusicUrl(source, id, br) })
+    }
+
+    case '/api/lx-search': {",
     "      const source = url.searchParams.get('source') || ''",
     "      const keyword = url.searchParams.get('q') || ''",
     "      const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10) || 1)",
