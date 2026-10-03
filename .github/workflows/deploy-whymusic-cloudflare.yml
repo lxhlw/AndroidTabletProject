@@ -37,7 +37,7 @@ jobs:
           corepack prepare pnpm@10.18.0 --activate
           pnpm --version
 
-      - name: Patch search fallback
+      - name: Patch WhyMusic worker fallbacks
         working-directory: whymusic-source
         run: |
           python3 - <<'PY'
@@ -46,65 +46,10 @@ jobs:
 
           path = Path("packages/web/worker/why.js")
           text = path.read_text()
-          # 歌词是附加信息：GD lyric 上游失败时返回空歌词，而不是让整个 API 变成 500。
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          path = Path("packages/web/worker/why.js")
-          text = path.read_text()
-          pattern = re.compile(r"async function getWhyMusicLyric\(lyricId, source\) \{.*?\n\}\n\nasync function getWhyMusicPic", re.S)
-          replacement = '''async function getWhyMusicLyric(lyricId, source) {
-            if (source === AUDIOMACK_SOURCE) return { lyric: '', tlyric: '' }
-            try {
-              const data = await gdRequest('lyric', { source, id: lyricId })
-              return { lyric: data?.lyric || '', tlyric: data?.tlyric || '' }
-            } catch (err) {
-              console.error('[why] lyric unavailable:', err?.message)
-              return { lyric: '', tlyric: '' }
-            }
-          }
 
-          async function getWhyMusicPic'''
-          text, n = pattern.subn(replacement, text, count=1)
-          if n != 1:
-              raise SystemExit("getWhyMusicLyric function not found")
-          path.write_text(text)
-          print("✓ Lyric failure now degrades to empty lyric payload")
-          PY
-
-          # GD 解析失败时，网易云歌曲直接使用官方 outer media URL 作为播放兜底。
-          # 该地址是稳定的 HTTPS 入口，不依赖 GD 的 url 解析服务。
-          media_marker = "async function getWhySubSourceUrl(songId, source, bitrate = GD_BITRATE) {"
-          if "function getNeteaseOuterUrl" not in text:
-              helper = '''
-          function getNeteaseOuterUrl(songId) {
-            if (!songId) return ''
-            return 'https://music.163.com/song/media/outer/url?id=' + encodeURIComponent(songId) + '.mp3'
-          }
-
-          '''
-              text = text.replace(media_marker, helper + media_marker, 1)
-
-          old_media = '''async function getWhySubSourceUrl(songId, source, bitrate = GD_BITRATE) {
-            if (source === AUDIOMACK_SOURCE) return await getAudiomackMedia(songId)
-            return await getGdUrl(songId, source, bitrate)
-          }'''
-          new_media = '''async function getWhySubSourceUrl(songId, source, bitrate = GD_BITRATE) {
-            if (source === AUDIOMACK_SOURCE) return await getAudiomackMedia(songId)
-            try {
-              const url = await getGdUrl(songId, source, bitrate)
-              if (url) return url
-            } catch (err) {
-              console.error('[why] GD url failed ' + source + '/' + songId + ': ' + (err?.message || err))
-            }
-            if (source === 'netease') return getNeteaseOuterUrl(songId)
-            return ''
-          }'''
-          if old_media not in text:
-              raise SystemExit("getWhySubSourceUrl block not found")
-          text = text.replace(old_media, new_media, 1)
-
-          fallback = r'''
+          # 1) 搜索：GD 两个子源都失败时，使用网易云公开搜索接口兜底。
+          if "async function searchWhyMusicNetease(" not in text:
+              helper = r'''
           /** GD 全部失败时的搜索兜底：直接走网易云公开搜索接口。 */
           async function searchWhyMusicNetease(keyword, page = 1, count = 20) {
             const offset = (Math.max(1, Number(page) || 1) - 1) * count
@@ -117,24 +62,21 @@ jobs:
           }
 
           '''
-
-          if "async function searchWhyMusicNetease(" not in text:
               text = text.replace(
                   "async function searchWhyMusic(keyword, page = 1, count = 20) {",
-                  fallback + "async function searchWhyMusic(keyword, page = 1, count = 20) {",
+                  helper + "async function searchWhyMusic(keyword, page = 1, count = 20) {",
                   1,
               )
 
-          pattern = re.compile(
+          search_pattern = re.compile(
               r"async function searchWhyMusic\(keyword, page = 1, count = 20\) \{.*?\n\}\n\nasync function getGdUrl\(",
               re.S,
           )
-
-          match = pattern.search(text)
-          if not match:
+          search_match = search_pattern.search(text)
+          if not search_match:
               raise SystemExit("searchWhyMusic function not found")
 
-          replacement = r'''async function searchWhyMusic(keyword, page = 1, count = 20) {
+          search_replacement = r'''async function searchWhyMusic(keyword, page = 1, count = 20) {
             const settled = await Promise.allSettled(
               WHY_SOURCES.map(source => searchWhySubSource(source, keyword, page, count)),
             )
@@ -151,7 +93,6 @@ jobs:
               } catch (err) {
                 console.error('[why] netease fallback search failed:', err?.message)
               }
-
               throw new Error(
                 `所有子音源都失败：${settled.map((r, i) => `${WHY_SOURCES[i]}（${r.reason?.message}）`).join('；')}`,
               )
@@ -174,10 +115,70 @@ jobs:
           }
 
           async function getGdUrl('''
+          text = text[:search_match.start()] + search_replacement + text[search_match.end():]
 
-          text = text[:match.start()] + replacement + text[match.end():]
+          # 2) 播放：GD URL 解析失败时，网易云歌曲使用外部媒体 URL。
+          if "function getNeteaseOuterUrl(" not in text:
+              helper = r'''
+          function getNeteaseOuterUrl(songId) {
+            if (!songId) return ''
+            return 'https://music.163.com/song/media/outer/url?id='
+              + encodeURIComponent(songId) + '.mp3'
+          }
+
+          '''
+              text = text.replace(
+                  "async function getWhySubSourceUrl(songId, source, bitrate = GD_BITRATE) {",
+                  helper + "async function getWhySubSourceUrl(songId, source, bitrate = GD_BITRATE) {",
+                  1,
+              )
+
+          media_pattern = re.compile(
+              r"async function getWhySubSourceUrl\(songId, source, bitrate = GD_BITRATE\) \{.*?\n\}",
+              re.S,
+          )
+          media_match = media_pattern.search(text)
+          if not media_match:
+              raise SystemExit("getWhySubSourceUrl function not found")
+
+          media_replacement = '''async function getWhySubSourceUrl(songId, source, bitrate = GD_BITRATE) {
+            if (source === AUDIOMACK_SOURCE) return await getAudiomackMedia(songId)
+            try {
+              const url = await getGdUrl(songId, source, bitrate)
+              if (url) return url
+            } catch (err) {
+              console.error('[why] GD url failed ' + source + '/' + songId + ': ' + (err?.message || err))
+            }
+            if (source === 'netease') return getNeteaseOuterUrl(songId)
+            return ''
+          }'''
+          text = text[:media_match.start()] + media_replacement + text[media_match.end():]
+
+          # 3) 歌词：失败时返回空歌词，避免把播放流程变成 500。
+          lyric_pattern = re.compile(
+              r"async function getWhyMusicLyric\(lyricId, source\) \{.*?\n\}\n\nasync function getWhyMusicPic",
+              re.S,
+          )
+          lyric_match = lyric_pattern.search(text)
+          if not lyric_match:
+              raise SystemExit("getWhyMusicLyric function not found")
+
+          lyric_replacement = '''async function getWhyMusicLyric(lyricId, source) {
+            if (source === AUDIOMACK_SOURCE) return { lyric: '', tlyric: '' }
+            try {
+              const data = await gdRequest('lyric', { source, id: lyricId })
+              return { lyric: data?.lyric || '', tlyric: data?.tlyric || '' }
+            } catch (err) {
+              console.error('[why] lyric unavailable:', err?.message)
+              return { lyric: '', tlyric: '' }
+            }
+          }
+
+          async function getWhyMusicPic'''
+          text = text[:lyric_match.start()] + lyric_replacement + text[lyric_match.end():]
+
           path.write_text(text)
-          print("✓ Search fallback patched by function replacement")
+          print("✓ Search, media URL and lyric fallbacks patched")
           PY
 
       - name: Install WhyMusic dependencies
