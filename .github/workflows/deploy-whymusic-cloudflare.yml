@@ -156,9 +156,15 @@ jobs:
           echo "$lyric" | jq -e 'type == "object" and has("lyric") and has("tlyric")' >/dev/null
           echo "✓ /api/why-lyric responds with lyric payload"
 
-          recommend="$(curl -fsS --max-time 45 --get "$BASE_URL/api/recommend" \
+          recommend_response="$(curl -sS --max-time 45 --get -w '\nHTTP_STATUS:%{http_code}' "$BASE_URL/api/recommend" \
             --data-urlencode 'cat=cantonese' \
             --data-urlencode 'limit=5' \
             --data-urlencode 'seed=1')"
+          recommend_status="$(printf '%s\n' "$recommend_response" | sed -n 's/^HTTP_STATUS://p')"
+          recommend="$(printf '%s\n' "$recommend_response" | sed '/^HTTP_STATUS:/d')"
+          echo "Recommendation HTTP status: $recommend_status"
+          echo "Recommendation response:"
+          echo "$recommend"
+          test "$recommend_status" = "200"
           echo "$recommend" | jq -e '.data | type == "array"' >/dev/null
           echo "✓ /api/recommend returns a data array"
