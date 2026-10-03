@@ -90,6 +90,10 @@ const sixyinPluginFetch = async (input, init = {}) => {
       console.log('[SixYin:proxy] hibai status=' + response.status + ' content-type=' + (response.headers.get('content-type') || ''))
       console.log('[SixYin:proxy] hibai body=' + body.slice(0, 1000))
     }
+    if (url.includes('interface3.music.163.com')) {
+      console.log('[SixYin:proxy] netease status=' + response.status + ' content-type=' + (response.headers.get('content-type') || ''))
+      console.log('[SixYin:proxy] netease body=' + body.slice(0, 1600))
+    }
     if (!response.ok) {
       throw new Error('SixYin production proxy HTTP ' + response.status + ': ' + body.slice(0, 300))
     }
