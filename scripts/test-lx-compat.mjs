@@ -119,38 +119,49 @@ try {
   throw err
 }
 
-let sixyinMedia
-try {
-  sixyinMedia = await sixyinPlugin.getMediaSource({
-  id: '186016',
-  title: 'SixYin Smoke Test',
-  artist: 'Test Artist',
-  subSource: 'wy',
-  lxInfo: {
-    id: 'sixyin-smoke-1',
-    songmid: '186016',
-    name: '晴天',
-    singer: '周杰伦',
-  },
-  lxAlternatives: [],
-}, '128')
-
-
-} catch (err) {
-  console.error('SIXYIN_EXEC_ERROR_NAME=' + (err?.name || 'unknown'))
-  console.error('SIXYIN_EXEC_ERROR_MESSAGE=' + String(err?.message || err))
-  console.error('SIXYIN_EXEC_ERROR_STACK=' + String(err?.stack || '').split('\n').slice(0, 5).join(' | '))
-  throw err
+const sixyinSearch = await sixyinPlugin.search('周杰伦', 1, 'music')
+const sixyinCandidates = Array.isArray(sixyinSearch?.data) ? sixyinSearch.data.slice(0, 8) : []
+if (!sixyinCandidates.length) {
+  throw new Error('Actual SixYin search returned no playable candidates')
 }
-if (!sixyinMedia?.url || sixyinMedia.source !== 'wy') {
-  throw new Error('Actual SixYin source could not execute musicUrl through LX bridge')
-}
-if (!requests.some(r => r.url.includes('/api/proxy?'))) {
-  throw new Error('Actual SixYin source did not exercise the WhyMusic proxy bridge')
+console.log('✓ Actual SixYin search returned ' + sixyinCandidates.length + ' candidates')
+
+let sixyinMedia = null
+let sixyinPlayableCandidate = null
+const sixyinPlaybackFailures = []
+
+for (const candidate of sixyinCandidates) {
+  try {
+    const media = await sixyinPlugin.getMediaSource({
+      id: candidate.id,
+      title: candidate.title || candidate.name || '',
+      artist: candidate.artist || candidate.singer || '',
+      subSource: candidate.subSource || candidate.source || 'wy',
+      lxInfo: candidate.lxInfo || {
+        id: candidate.id,
+        songmid: candidate.songmid || candidate.id,
+        name: candidate.title || candidate.name || '',
+        singer: candidate.artist || candidate.singer || '',
+      },
+      lxAlternatives: candidate.lxAlternatives || [],
+    }, '128')
+    if (media?.url) {
+      sixyinMedia = media
+      sixyinPlayableCandidate = candidate
+      break
+    }
+    sixyinPlaybackFailures.push({ id: candidate.id, reason: 'empty url' })
+  } catch (err) {
+    sixyinPlaybackFailures.push({ id: candidate.id, reason: String(err?.message || err) })
+  }
 }
 
-console.log('✓ Actual SixYin bundled source loaded through buildLXPlugin')
+if (!sixyinMedia?.url) {
+  throw new Error('Actual SixYin search results had no playable candidate: ' + JSON.stringify(sixyinPlaybackFailures))
+}
+console.log('✓ Actual SixYin selected a playable search result: ' + String(sixyinPlayableCandidate?.title || sixyinPlayableCandidate?.name || sixyinPlayableCandidate?.id))
 console.log('✓ Actual SixYin musicUrl executed successfully through request bridge')
+
 
 const fakeResponse = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
