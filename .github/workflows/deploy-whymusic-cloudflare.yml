@@ -46,6 +46,37 @@ jobs:
 
           path = Path("packages/web/worker/why.js")
           text = path.read_text()
+          # GD 解析失败时，网易云歌曲直接使用官方 outer media URL 作为播放兜底。
+          # 该地址是稳定的 HTTPS 入口，不依赖 GD 的 url 解析服务。
+          media_marker = "async function getWhySubSourceUrl(songId, source, bitrate = GD_BITRATE) {"
+          if "function getNeteaseOuterUrl" not in text:
+              helper = '''
+          function getNeteaseOuterUrl(songId) {
+            if (!songId) return ''
+            return 'https://music.163.com/song/media/outer/url?id=' + encodeURIComponent(songId) + '.mp3'
+          }
+
+          '''
+              text = text.replace(media_marker, helper + media_marker, 1)
+
+          old_media = '''async function getWhySubSourceUrl(songId, source, bitrate = GD_BITRATE) {
+            if (source === AUDIOMACK_SOURCE) return await getAudiomackMedia(songId)
+            return await getGdUrl(songId, source, bitrate)
+          }'''
+          new_media = '''async function getWhySubSourceUrl(songId, source, bitrate = GD_BITRATE) {
+            if (source === AUDIOMACK_SOURCE) return await getAudiomackMedia(songId)
+            try {
+              const url = await getGdUrl(songId, source, bitrate)
+              if (url) return url
+            } catch (err) {
+              console.error('[why] GD url failed ' + source + '/' + songId + ': ' + (err?.message || err))
+            }
+            if (source === 'netease') return getNeteaseOuterUrl(songId)
+            return ''
+          }'''
+          if old_media not in text:
+              raise SystemExit("getWhySubSourceUrl block not found")
+          text = text.replace(old_media, new_media, 1)
 
           fallback = r'''
           /** GD 全部失败时的搜索兜底：直接走网易云公开搜索接口。 */
@@ -154,6 +185,8 @@ jobs:
           echo "✓ Official plugin is valid CommonJS"
           grep -q 'searchWhyMusicNetease' packages/web/dist/_worker.js
           echo "✓ Search fallback is included in Worker bundle"
+          grep -q 'getNeteaseOuterUrl' packages/web/dist/_worker.js
+          echo "✓ Netease media URL fallback is included in Worker bundle"
 
       - name: Deploy WhyMusic
         working-directory: whymusic-source
