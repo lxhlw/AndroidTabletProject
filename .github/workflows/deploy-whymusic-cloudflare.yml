@@ -37,12 +37,65 @@ jobs:
           corepack prepare pnpm@10.18.0 --activate
           pnpm --version
 
-      - name: Enable pnpm
+      - name: Patch search fallback
         working-directory: whymusic-source
         run: |
-          corepack enable
-          corepack prepare pnpm@10.18.0 --activate
-          pnpm --version
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("packages/web/worker/why.js")
+          text = path.read_text()
+
+          marker = "async function searchWhyMusic(keyword, page = 1, count = 20) {"
+          fallback = r'''
+          /** GD 全部失败时的搜索兜底：直接走网易云公开搜索接口。 */
+          async function searchWhyMusicNetease(keyword, page = 1, count = 20) {
+            const offset = (Math.max(1, Number(page) || 1) - 1) * count
+            const data = await neteaseFetch(
+              '/api/search/get?s=' + encodeURIComponent(keyword)
+              + '&type=1&limit=' + count + '&offset=' + offset,
+            )
+            const songs = (data && data.result && data.result.songs) || []
+            return songs.map(gdTrackToItem).filter(Boolean)
+          }
+
+          '''
+
+          if "async function searchWhyMusicNetease(" not in text:
+              if marker not in text:
+                  raise SystemExit("searchWhyMusic marker not found")
+              text = text.replace(marker, fallback + marker, 1)
+
+          old = r'''  if (settled.every(r => r.status === 'rejected')) {
+            throw new Error(
+              `所有子音源都失败：${settled.map((r, i) => `${WHY_SOURCES[i]}（${r.reason?.message}）`).join('；')}`,
+            )
+          }
+          '''
+
+          new = r'''  if (settled.every(r => r.status === 'rejected')) {
+            // GD 暂时不可用时，至少保留一个可工作的搜索入口。
+            // 网易云搜索结果沿用现有 MusicItem 结构；播放时仍走 /api/why-url。
+            try {
+              const fallback = await searchWhyMusicNetease(keyword, page, count)
+              if (fallback.length > 0) return fallback
+            } catch (err) {
+              console.error('[why] netease fallback search failed:', err?.message)
+            }
+
+            throw new Error(
+              `所有子音源都失败：${settled.map((r, i) => `${WHY_SOURCES[i]}（${r.reason?.message}）`).join('；')}`,
+            )
+          }
+          '''
+
+          if old not in text:
+              raise SystemExit("search failure block not found")
+
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+          print("✓ Search fallback patched")
+          PY
 
       - name: Install WhyMusic dependencies
         working-directory: whymusic-source
@@ -73,6 +126,8 @@ jobs:
           echo "✓ No external node:stream import remains"
           grep -q 'module.exports' packages/web/dist/plugins/whymusic.js
           echo "✓ Official plugin is valid CommonJS"
+          grep -q 'searchWhyMusicNetease' packages/web/dist/_worker.js
+          echo "✓ Search fallback is included in Worker bundle"
 
       - name: Deploy WhyMusic
         working-directory: whymusic-source
@@ -120,5 +175,5 @@ jobs:
             --data-urlencode 'type=music' \
             --data-urlencode 'page=1' \
             --data-urlencode 'count=1')"
-          echo "$search" | jq -e '.data | type == "array"' >/dev/null
-          echo "✓ /api/why-search responds with a data array"
+          echo "$search" | jq -e '.data | type == "array" and length >= 1' >/dev/null
+          echo "✓ /api/why-search returns at least one result"
