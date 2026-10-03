@@ -46,9 +46,13 @@ export function isLXMusicSourceCode(code: string): boolean {
 
   const hasLXEventProtocol = hasLXInitEvent || hasLXApiBinding
 
+  // 标准 LX 有时只留下 inited 协议触点；打包源则可能暴露 API 解构。
+  // 三者任一成立即可作为协议动作证据，普通包含 "lx" 文本仍不会通过。
   const hasLXAction =
     code.includes('musicUrl')
     || code.includes('getMediaSource')
+    || hasLXInitEvent
+    || hasLXApiBinding
 
   return hasLXNamespace
     && hasLXEventProtocol
