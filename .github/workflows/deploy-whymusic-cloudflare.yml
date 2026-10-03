@@ -218,11 +218,12 @@ jobs:
           grep -q 'globalThis.lx' "$lx_proxy_file"
           grep -q 'EVENT_NAMES.inited' "$lx_proxy_file"
           echo "✓ Production proxy can fetch and return the real LX source code"
+          echo "Running LX compatibility tests..."
+          export WHYMUSIC_TYPESCRIPT="$(find whymusic-source/node_modules . -path "*/typescript/lib/typescript.js" -type f -print -quit 2>/dev/null)"
+          test -n "$WHYMUSIC_TYPESCRIPT"
+          echo "Using TypeScript compiler: $WHYMUSIC_TYPESCRIPT"
           echo "Verifying production LX installer contract..."
           test -f scripts/test-lx-installer-contract.mjs
           node scripts/test-lx-installer-contract.mjs
           echo "Running real LX source compatibility smoke test..."
-          export WHYMUSIC_TYPESCRIPT="$(find whymusic-source/node_modules . -path "*/typescript/lib/typescript.js" -type f -print -quit 2>/dev/null)"
-          test -n "$WHYMUSIC_TYPESCRIPT"
-          echo "Using TypeScript compiler: $WHYMUSIC_TYPESCRIPT"
           node scripts/test-lx-compat.mjs
