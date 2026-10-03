@@ -109,7 +109,9 @@ try {
   throw err
 }
 
-const sixyinMedia = await sixyinPlugin.getMediaSource({
+let sixyinMedia
+try {
+  const sixyinMedia = await sixyinPlugin.getMediaSource({
   id: 'sixyin-smoke-1',
   title: 'SixYin Smoke Test',
   artist: 'Test Artist',
@@ -123,6 +125,13 @@ const sixyinMedia = await sixyinPlugin.getMediaSource({
   lxAlternatives: [],
 }, '128')
 
+
+} catch (err) {
+  console.error('SIXYIN_EXEC_ERROR_NAME=' + (err?.name || 'unknown'))
+  console.error('SIXYIN_EXEC_ERROR_MESSAGE=' + String(err?.message || err))
+  console.error('SIXYIN_EXEC_ERROR_STACK=' + String(err?.stack || '').split('\n').slice(0, 5).join(' | '))
+  throw err
+}
 if (!sixyinMedia?.url || sixyinMedia.source !== 'wy') {
   throw new Error('Actual SixYin source could not execute musicUrl through LX bridge')
 }
