@@ -19,14 +19,32 @@ if (/module\.exports\s*=/.test(code)) throw new Error('LX source was unexpectedl
 
 console.log('✓ Production installer fetch returned valid LX source code')
 
-const lxUrlResponse = await fetch(baseUrl + '/api/lx-url?source=qq&id=97773&br=128', { cache: 'no-store' })
-if (!lxUrlResponse.ok) {
-  throw new Error('Production /api/lx-url failed: HTTP ' + lxUrlResponse.status + ' ' + (await lxUrlResponse.text()).slice(0, 300))
+const qqSearchResponse = await fetch(baseUrl + '/api/lx-search?source=qq&q=' + encodeURIComponent('周杰伦') + '&page=1&count=8', { cache: 'no-store' })
+if (!qqSearchResponse.ok) {
+  throw new Error('Production QQ LX search failed: HTTP ' + qqSearchResponse.status + ' ' + (await qqSearchResponse.text()).slice(0, 300))
 }
-const lxUrlBody = await lxUrlResponse.json()
-if (typeof lxUrlBody?.url !== 'string' || !/^https?:\/\//.test(lxUrlBody.url)) {
-  throw new Error('Production /api/lx-url returned no playable URL')
+const qqSearchBody = await qqSearchResponse.json()
+const qqCandidates = Array.isArray(qqSearchBody?.data) ? qqSearchBody.data.slice(0, 8) : []
+if (!qqCandidates.length) throw new Error('Production QQ LX search returned no candidates')
+
+let qqPlayableUrl = ''
+let qqPlayableId = ''
+for (const candidate of qqCandidates) {
+  const id = String(candidate?.id || candidate?.songmid || '')
+  if (!id) continue
+  const lxUrlResponse = await fetch(baseUrl + '/api/lx-url?source=qq&id=' + encodeURIComponent(id) + '&br=128', { cache: 'no-store' })
+  const lxUrlText = await lxUrlResponse.text()
+  if (!lxUrlResponse.ok) continue
+  let lxUrlBody = null
+  try { lxUrlBody = JSON.parse(lxUrlText) } catch {}
+  if (typeof lxUrlBody?.url === 'string' && /^https?:\/\//.test(lxUrlBody.url)) {
+    qqPlayableUrl = lxUrlBody.url
+    qqPlayableId = id
+    break
+  }
 }
+if (!qqPlayableUrl) throw new Error('Production /api/lx-url returned no playable URL for QQ search candidates')
+console.log('✓ Production QQ LX search returned playable candidate ' + qqPlayableId)
 console.log('✓ Production /api/lx-url returned a playable QQ URL')
 
 
