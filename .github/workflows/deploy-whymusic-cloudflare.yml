@@ -222,6 +222,8 @@ jobs:
           export WHYMUSIC_TYPESCRIPT="$(find whymusic-source/node_modules . -path "*/typescript/lib/typescript.js" -type f -print -quit 2>/dev/null)"
           test -n "$WHYMUSIC_TYPESCRIPT"
           echo "Using TypeScript compiler: $WHYMUSIC_TYPESCRIPT"
+          echo "Verifying LX install persistence contract..."
+          node scripts/test-lx-install-persistence.mjs
           echo "Verifying production LX installer contract..."
           test -f scripts/test-lx-installer-contract.mjs
           node scripts/test-lx-installer-contract.mjs
