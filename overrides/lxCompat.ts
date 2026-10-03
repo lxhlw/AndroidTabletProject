@@ -254,17 +254,7 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
     }) as [string, any][]
   }
 
-  const sources = initPayload?.status && initPayload?.sources
-    ? Object.entries(initPayload.sources).filter(([key, info]: any) => {
-        return /^(wy|tx|kg|kw|mg)$/.test(key) && info?.type === 'music'
-      }) as [string, any][]
-    : []
-    return /^(wy|tx|kg|kw|mg)$/.test(key) && info?.type === 'music'
-  }) as [string, any][]
-
-  if (sources.length === 0) {
-    throw new Error('LX 音源没有声明 wy/tx/kg/kw/mg 音乐源')
-  }
+  // LX 源可能异步发送 inited，不能在这里同步检查 sources。
 
   const invoke = async (source: string, action: string, info: any) => {
     let last: any = null
