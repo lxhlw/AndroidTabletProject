@@ -205,3 +205,5 @@ jobs:
           printf '%s' "$sample_code" | grep -q "'kw'"
           printf '%s' "$sample_code" | grep -q "'mg'"
           echo "✓ Real LX multi-platform source sample declares wy/tx/kg/kw/mg"
+          echo "Running real LX source compatibility smoke test..."
+          node ../scripts/test-lx-compat.mjs
