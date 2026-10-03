@@ -45,7 +45,16 @@ jobs:
         working-directory: whymusic-source
         run: pnpm build:cf
 
-      - name: Verify pre-bundled Worker
+      - name: Install L101 official WhyMusic plugin
+        working-directory: whymusic-source
+        run: |
+          test -s ../plugins/whymusic.js
+          mkdir -p packages/web/dist/plugins
+          cp ../plugins/whymusic.js packages/web/dist/plugins/whymusic.js
+          test -s packages/web/dist/plugins/whymusic.js
+          echo "✓ Official plugin copied to packages/web/dist/plugins/whymusic.js"
+
+      - name: Verify pre-bundled Worker and plugin
         working-directory: whymusic-source
         run: |
           test -s packages/web/dist/_worker.js
@@ -55,6 +64,8 @@ jobs:
             exit 1
           fi
           echo "✓ No external node:stream import remains"
+          grep -q 'module.exports' packages/web/dist/plugins/whymusic.js
+          echo "✓ Official plugin is valid CommonJS"
 
       - name: Deploy WhyMusic
         working-directory: whymusic-source
