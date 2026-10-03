@@ -1,7 +1,7 @@
 import { chromium } from 'playwright'
 
 const baseUrl = process.env.BASE_URL || 'https://whymusic-l101.pages.dev'
-const sourceUrl = 'https://raw.githubusercontent.com/cdyUuu/lx-music-xinghai-source/main/xinghai-music-source.js'
+const sourceUrl = 'https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/latest.js'
 const isLXCode = (code) => /(?:globalThis|window)(?:\\.lx|\\[\\s*['\"]lx['\"]\\s*\\])/.test(code)
   && /EVENT_NAMES(?:\\.inited|\\[\\s*['\"]inited['\"]\\s*\\])/.test(code)
   && !code.includes('module.exports =')
@@ -38,10 +38,10 @@ try {
       return Array.isArray(plugins)
         && plugins.some((p) =>
           p
-          && typeof p.name === 'string'
+          && p.name === '六音音源'
           && typeof p.code === 'string'
-          && p.code.includes('globalThis.lx')
-          && p.code.includes('EVENT_NAMES.inited')
+          && p.code.length > 100000
+          && p.code.includes('currentScriptInfo')
           && p.enabled !== false
         )
     } catch {
@@ -51,9 +51,7 @@ try {
 
   const installed = await page.evaluate(() => {
     const plugins = JSON.parse(localStorage.getItem('musicfree-plugins') || '[]')
-    return plugins.find((p) =>
-      p?.code?.includes('globalThis.lx') && p?.code?.includes('EVENT_NAMES.inited')
-    ) || null
+    return plugins.find((p) => p?.name === '六音音源') || null
   })
 
   if (!installed?.name || !installed?.code) {
@@ -71,9 +69,7 @@ try {
   const duplicateCheck = await page.waitForFunction(() => {
     try {
       const plugins = JSON.parse(localStorage.getItem('musicfree-plugins') || '[]')
-      const lxPlugins = plugins.filter((p) =>
-        p?.code?.includes('globalThis.lx') && p?.code?.includes('EVENT_NAMES.inited')
-      )
+      const lxPlugins = plugins.filter((p) => p?.name === '六音音源')
       return lxPlugins.length === 1
     } catch {
       return false
@@ -83,9 +79,7 @@ try {
 
   const reinstallState = await page.evaluate(() => {
     const plugins = JSON.parse(localStorage.getItem('musicfree-plugins') || '[]')
-    const lxPlugins = plugins.filter((p) =>
-      p?.code?.includes('globalThis.lx') && p?.code?.includes('EVENT_NAMES.inited')
-    )
+    const lxPlugins = plugins.filter((p) => p?.name === '六音音源')
     return { count: lxPlugins.length, name: lxPlugins[0]?.name || '' }
   })
 
@@ -101,9 +95,7 @@ try {
     try {
       const plugins = JSON.parse(localStorage.getItem('musicfree-plugins') || '[]')
       return Array.isArray(plugins)
-        && plugins.some((p) =>
-          p?.code?.includes('globalThis.lx') && p?.code?.includes('EVENT_NAMES.inited') && p.enabled !== false
-        )
+        && plugins.some((p) => p?.name === '六音音源' && p.enabled !== false)
     } catch {
       return false
     }
