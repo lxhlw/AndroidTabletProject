@@ -326,6 +326,10 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
   const lxUtils = {
     buffer: {
       from(value: any, encoding = 'utf-8') {
+        if (value instanceof Uint8Array) return new Uint8Array(value)
+        if (ArrayBuffer.isView(value)) return new Uint8Array(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength))
+        if (value instanceof ArrayBuffer) return new Uint8Array(value.slice(0))
+        if (Array.isArray(value)) return new Uint8Array(value)
         const text = String(value ?? '')
         if (encoding === 'base64') {
           const binary = atob(text)
@@ -457,9 +461,34 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
     return state
   }
 
+  const lxBytes = (value: any, encoding = 'utf-8'): Uint8Array => {
+    if (value instanceof Uint8Array) return new Uint8Array(value)
+    if (ArrayBuffer.isView(value)) {
+      return new Uint8Array(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength))
+    }
+    if (value instanceof ArrayBuffer) return new Uint8Array(value.slice(0))
+    if (Array.isArray(value)) return new Uint8Array(value)
+    if (typeof value === 'number') return new Uint8Array(value)
+    const text = String(value ?? '')
+    if (encoding === 'base64') {
+      const binary = atob(text)
+      return new Uint8Array(Array.from(binary, ch => ch.charCodeAt(0)))
+    }
+    if (encoding === 'hex') {
+      const normalized = text.replace(/[^0-9a-f]/gi, '')
+      const out = new Uint8Array(Math.floor(normalized.length / 2))
+      for (let i = 0; i < out.length; i++) out[i] = parseInt(normalized.slice(i * 2, i * 2 + 2), 16)
+      return out
+    }
+    if (encoding === 'binary' || encoding === 'latin1') {
+      return new Uint8Array(Array.from(text, ch => ch.charCodeAt(0) & 0xff))
+    }
+    return new TextEncoder().encode(text)
+  }
+
   const aesEncrypt = (input: any, mode = 'aes-128-ecb', key: any, iv?: any) => {
-    const data = input instanceof Uint8Array ? new Uint8Array(input) : new Uint8Array(input || [])
-    const keyBytes = key instanceof Uint8Array ? key : new Uint8Array(key || [])
+    const data = lxBytes(input)
+    const keyBytes = lxBytes(key)
     if (![16, 24, 32].includes(keyBytes.length)) throw new Error('LX AES key must be 128/192/256 bit')
     const name = String(mode || '').toLowerCase()
     if (!/^aes-(128|192|256)-(ecb|cbc)$/.test(name)) throw new Error('LX AES mode unsupported: ' + mode)
@@ -467,7 +496,7 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
     padded.set(data)
     padded.fill(16 - (data.length % 16 || 16), data.length)
     const out = new Uint8Array(padded.length)
-    let prev = name.endsWith('-cbc') ? (iv instanceof Uint8Array ? new Uint8Array(iv) : new Uint8Array(iv || [])) : new Uint8Array(16)
+    let prev = name.endsWith('-cbc') ? lxBytes(iv) : new Uint8Array(16)
     if (name.endsWith('-cbc') && prev.length !== 16) throw new Error('LX AES IV must be 16 bytes')
     for (let off = 0; off < padded.length; off += 16) {
       const block = padded.slice(off, off + 16)
@@ -547,7 +576,7 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
   }
 
   const rsaEncrypt = (input: any, key: any) => {
-    const data = input instanceof Uint8Array ? new Uint8Array(input) : new Uint8Array(input || [])
+    const data = lxBytes(input)
     const { n, e, size } = rsaPublicParts(key)
     if (data.length > size) throw new Error('LX RSA plaintext is larger than key size')
     const padded = new Uint8Array(size)
