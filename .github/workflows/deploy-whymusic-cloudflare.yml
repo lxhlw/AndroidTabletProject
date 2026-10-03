@@ -233,3 +233,5 @@ jobs:
           node scripts/test-lx-installer-contract.mjs
           echo "Running real LX source compatibility smoke test..."
           node scripts/test-lx-compat.mjs
+          echo "Running real LX browser E2E..."
+          node scripts/test-lx-browser-e2e.mjs
