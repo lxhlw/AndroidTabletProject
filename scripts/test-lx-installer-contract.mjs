@@ -19,6 +19,17 @@ if (/module\.exports\s*=/.test(code)) throw new Error('LX source was unexpectedl
 
 console.log('✓ Production installer fetch returned valid LX source code')
 
+const lxUrlResponse = await fetch(baseUrl + '/api/lx-url?source=qq&id=97773&br=128', { cache: 'no-store' })
+if (!lxUrlResponse.ok) {
+  throw new Error('Production /api/lx-url failed: HTTP ' + lxUrlResponse.status + ' ' + (await lxUrlResponse.text()).slice(0, 300))
+}
+const lxUrlBody = await lxUrlResponse.json()
+if (typeof lxUrlBody?.url !== 'string' || !/^https?:\/\//.test(lxUrlBody.url)) {
+  throw new Error('Production /api/lx-url returned no playable URL')
+}
+console.log('✓ Production /api/lx-url returned a playable QQ URL')
+
+
 const tsModule = await import(pathToFileURL(tsPath).href)
 const tsCompiler = tsModule.default || tsModule
 const lxTsPath = 'whymusic-source/packages/web/src/core/plugin/lxCompat.ts'
