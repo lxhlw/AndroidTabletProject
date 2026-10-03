@@ -117,3 +117,38 @@ if (!lyric || typeof lyric.rawLrc !== 'string') {
 console.log('✓ LX request() bridge reached the WhyMusic proxy')
 console.log('✓ LX playback works for wy / tx / kg / kw / mg')
 console.log('✓ LX lyric handler bridge works')
+
+const fallbackPluginFetch = async (input, init = {}) => {
+  const url = String(input)
+  if (url.startsWith('https://whymusic-l101.pages.dev/api/proxy?')) {
+    const target = decodeURIComponent(new URL(url).searchParams.get('url') || '')
+    if (target.includes('interface3.music.163.com')) {
+      throw new Error('simulated primary wy failure')
+    }
+    return fakeResponse({ code: 200, url: 'https://example.com/fallback-audio.mp3' })
+  }
+  return fakeResponse({ code: 200, url: 'https://example.com/fake-audio.mp3' })
+}
+
+const fallbackPlugin = buildLXPlugin(sourceCode, {
+  pluginFetch: fallbackPluginFetch,
+  requireFn: (name) => { throw new Error('unexpected require: ' + name) },
+  console: fakeConsole,
+})
+
+const fallbackResult = await fallbackPlugin.getMediaSource({
+  id: 'wy-fail',
+  title: 'Fallback Test',
+  artist: 'Test Artist',
+  subSource: 'wy',
+  lxInfo: { id: 'wy-fail', songmid: 'wy-fail', name: 'Fallback Test', singer: 'Test Artist' },
+  lxAlternatives: [
+    { id: 'tx-ok', source: 'tx', lxInfo: { songmid: 'tx-ok', strMediaMid: 'tx-media-ok', name: 'Fallback Test', singer: 'Test Artist' } },
+  ],
+}, '128')
+
+if (!fallbackResult?.url || fallbackResult.source !== 'tx') {
+  throw new Error('LX automatic fallback from wy to tx failed')
+}
+
+console.log('✓ LX automatic fallback switches from failed wy to tx')
