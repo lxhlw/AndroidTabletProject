@@ -83,6 +83,9 @@ const pluginFetch = async (input, init = {}) => {
       ip: '127.0.0.1',
       url: 'https://example.com/fake-audio.mp3',
       lrc: '[00:00.00] LX compatibility smoke test',
+      picture: 'https://example.com/fake-cover.jpg',
+      picUrl: 'https://example.com/fake-cover.jpg',
+      cover: 'https://example.com/fake-cover.jpg',
     })
   }
 
