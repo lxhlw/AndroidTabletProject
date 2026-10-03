@@ -103,7 +103,11 @@ const validationBlock = `  // 代理把上游錯誤也當內容回傳，這裡�
     || code.includes('window["lx"]')
   const hasLXApiBinding =
     /(?:const|let|var)\\s*\\{[^}]*\\bEVENT_NAMES\\b[^}]*\\b(?:on|send|request)\\b[^}]*\\}\\s*=\\s*(?:globalThis|window)(?:\\.lx|\\[['"]lx['"])/s.test(code)
- 
+  const hasLXInitEvent =
+    code.includes('EVENT_NAMES.inited')
+    || code.includes("EVENT_NAMES['inited']")
+    || code.includes('EVENT_NAMES["inited"]')
+  const hasLXEventProtocol = hasLXInitEvent || hasLXApiBinding
   const hasLXAction =
     code.includes('musicUrl')
     || code.includes('getMediaSource')
