@@ -107,10 +107,10 @@ try {
 
   console.log('✓ Browser reload restored the persisted LX source')
 
-  await page.getByRole('button', { name: '搜尋', exact: true }).click()
+  await page.getByRole('button', { name: '搜尋', exact: true }).last().click()
   const searchBox = page.getByPlaceholder('歌曲、歌手或專輯', { exact: true })
   await searchBox.fill('周杰伦')
-  await page.getByRole('button', { name: '搜尋', exact: true }).click()
+  await page.getByRole('button', { name: '搜尋', exact: true }).first().click()
 
   await page.waitForFunction(() => document.body.innerText.includes('周杰伦'), null, { timeout: 60000 })
   console.log('✓ Restored LX source participated in a real production search')
