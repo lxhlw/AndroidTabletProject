@@ -10,7 +10,7 @@ const lxCompat = readFileSync(lxPath, 'utf8')
 
 const checks = [
   ['fetch → validate', 'const isCommonJSPlugin = code.includes', musicApp],
-  ['LX validation', 'const isLXMusicSource = /(?:globalThis|window)\\.lx/.test(code)', musicApp],
+  ['LX validation', 'const hasLXNamespace =', musicApp],
   ['validate → load', 'loadPluginCode(code, pluginName.trim() || undefined)', musicApp],
   ['load → persist', 'savePluginCode(registered, code)', musicApp],
   ['runner LX branch', 'buildLXPlugin(code, { pluginFetch, requireFn: _require, console: _console })', runner],
