@@ -91,7 +91,9 @@ const validationStart = musicApp.indexOf("  // 代理把上游錯誤也當內容
 const validationEnd = musicApp.indexOf("  return code", validationStart);
 if (validationStart < 0 || validationEnd < 0) throw new Error('LX patch: plugin validation markers not found');
 const validationBlock = `  // 代理把上游錯誤也當內容回傳，這裡確認真的是插件碼而不是錯誤頁
-  const isCommonJSPlugin = code.includes('module.exports') || code.includes('exports.')
+  const isCommonJSPlugin =
+    code.includes('module.exports')
+    || code.includes('exports.')
   const hasLXNamespace =
     code.includes('globalThis.lx')
     || code.includes("globalThis['lx']")
@@ -99,11 +101,12 @@ const validationBlock = `  // 代理把上游錯誤也當內容回傳，這裡�
     || code.includes('window.lx')
     || code.includes("window['lx']")
     || code.includes('window["lx"]')
-  const hasLXInitEvent =
-    code.includes('EVENT_NAMES.inited')
-    || code.includes("EVENT_NAMES['inited']")
-    || code.includes('EVENT_NAMES["inited"]')
-  const isLXMusicSource = hasLXNamespace && hasLXInitEvent
+  const hasLXApiBinding =
+    /\\b(?:const|let|var)\\s*\\{[^}]*\\bEVENT_NAMES\\s*[:=][^}]*\\b(?:on|send|request)\\s*[:=][^}]*\\}\\s*=\\s*(?:globalThis|window)(?:\\\\.lx|\\\\[['"]lx['"]\\\\])/s.test(code)
+  const hasLXAction =
+    code.includes('musicUrl')
+    || code.includes('getMediaSource')
+  const isLXMusicSource = hasLXNamespace && hasLXApiBinding && hasLXAction
   if (!isCommonJSPlugin && !isLXMusicSource) {
     throw new Error(t('回應不是插件代碼（可能是上游錯誤頁）'))
   }
