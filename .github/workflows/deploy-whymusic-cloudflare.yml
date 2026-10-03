@@ -218,33 +218,9 @@ jobs:
           grep -q 'globalThis.lx' "$lx_proxy_file"
           grep -q 'EVENT_NAMES.inited' "$lx_proxy_file"
           echo "✓ Production proxy can fetch and return the real LX source code"
-          echo "Verifying production frontend bundle contains LX compatibility..."
-          bundle_paths="$(printf '%s\n' "$homepage_html" | grep -oE '(src|href)=["'"'"'][^"'"'"']+\.js([?#][^"'"'"']*)?["'"'"']' | sed -E 's/^(src|href)=["'"'"']|["'"'"']$//g' | sort -u)"
-          test -n "$bundle_paths"
-          rm -rf /tmp/whymusic-bundles
-          mkdir -p /tmp/whymusic-bundles
-          found_lx=0
-          bundle_count=0
-          while IFS= read -r bundle_path; do
-            [ -n "$bundle_path" ] || continue
-            case "$bundle_path" in
-              http*) bundle_url="$bundle_path" ;;
-              /*) bundle_url="$BASE_URL$bundle_path" ;;
-              *) bundle_url="$BASE_URL/$bundle_path" ;;
-            esac
-            bundle_count=$((bundle_count + 1))
-            bundle_file="/tmp/whymusic-bundles/bundle-$bundle_count.js"
-            if curl -fsSL --max-time 30 "$bundle_url" -o "$bundle_file"; then
-              if grep -q 'buildLXPlugin' "$bundle_file" || grep -q 'isLXMusicSourceCode' "$bundle_file" || grep -q 'EVENT_NAMES.inited' "$bundle_file"; then
-                found_lx=1
-              fi
-            fi
-          done <<EOF
-$bundle_paths
-EOF
-          test "$bundle_count" -ge 1
-          test "$found_lx" -eq 1
-          echo "✓ Production frontend bundles contain LX installer/runtime compatibility ($bundle_count JS chunks scanned)"
+          echo "Verifying production LX installer contract..."
+          test -f scripts/test-lx-installer-contract.mjs
+          node scripts/test-lx-installer-contract.mjs
           echo "Running real LX source compatibility smoke test..."
           export WHYMUSIC_TYPESCRIPT="$(find whymusic-source/node_modules . -path "*/typescript/lib/typescript.js" -type f -print -quit 2>/dev/null)"
           test -n "$WHYMUSIC_TYPESCRIPT"
