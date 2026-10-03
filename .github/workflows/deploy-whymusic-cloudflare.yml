@@ -42,11 +42,11 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path("packages/web/worker/why.js")
           text = path.read_text()
 
-          marker = "async function searchWhyMusic(keyword, page = 1, count = 20) {"
           fallback = r'''
           /** GD 全部失败时的搜索兜底：直接走网易云公开搜索接口。 */
           async function searchWhyMusicNetease(keyword, page = 1, count = 20) {
@@ -62,39 +62,65 @@ jobs:
           '''
 
           if "async function searchWhyMusicNetease(" not in text:
-              if marker not in text:
-                  raise SystemExit("searchWhyMusic marker not found")
-              text = text.replace(marker, fallback + marker, 1)
+              text = text.replace(
+                  "async function searchWhyMusic(keyword, page = 1, count = 20) {",
+                  fallback + "async function searchWhyMusic(keyword, page = 1, count = 20) {",
+                  1,
+              )
 
-          old = r'''  if (settled.every(r => r.status === 'rejected')) {
-            throw new Error(
-              `所有子音源都失败：${settled.map((r, i) => `${WHY_SOURCES[i]}（${r.reason?.message}）`).join('；')}`,
+          pattern = re.compile(
+              r"async function searchWhyMusic\(keyword, page = 1, count = 20\) \{.*?\n\}\n\nasync function getGdUrl\(",
+              re.S,
+          )
+
+          match = pattern.search(text)
+          if not match:
+              raise SystemExit("searchWhyMusic function not found")
+
+          replacement = r'''async function searchWhyMusic(keyword, page = 1, count = 20) {
+            const settled = await Promise.allSettled(
+              WHY_SOURCES.map(source => searchWhySubSource(source, keyword, page, count)),
             )
-          }
-          '''
+            const buckets = settled.map((r, i) => {
+              if (r.status === 'fulfilled') return r.value
+              console.error(`[why] search failed on ${WHY_SOURCES[i]}: ${r.reason?.message}`)
+              return []
+            })
 
-          new = r'''  if (settled.every(r => r.status === 'rejected')) {
-            // GD 暂时不可用时，至少保留一个可工作的搜索入口。
-            // 网易云搜索结果沿用现有 MusicItem 结构；播放时仍走 /api/why-url。
-            try {
-              const fallback = await searchWhyMusicNetease(keyword, page, count)
-              if (fallback.length > 0) return fallback
-            } catch (err) {
-              console.error('[why] netease fallback search failed:', err?.message)
+            if (settled.every(r => r.status === 'rejected')) {
+              try {
+                const fallback = await searchWhyMusicNetease(keyword, page, count)
+                if (fallback.length > 0) return fallback
+              } catch (err) {
+                console.error('[why] netease fallback search failed:', err?.message)
+              }
+
+              throw new Error(
+                `所有子音源都失败：${settled.map((r, i) => `${WHY_SOURCES[i]}（${r.reason?.message}）`).join('；')}`,
+              )
             }
 
-            throw new Error(
-              `所有子音源都失败：${settled.map((r, i) => `${WHY_SOURCES[i]}（${r.reason?.message}）`).join('；')}`,
-            )
+            const seen = new Set()
+            const merged = []
+            const maxLen = Math.max(0, ...buckets.map(b => b.length))
+            for (let idx = 0; idx < maxLen; idx++) {
+              for (const bucket of buckets) {
+                const item = bucket[idx]
+                if (!item || !item.id || !item.title) continue
+                const key = `${gdNormalizeName(item.title)}::${gdNormalizeName(item.artist)}`
+                if (seen.has(key)) continue
+                seen.add(key)
+                merged.push(item)
+              }
+            }
+            return merged
           }
-          '''
 
-          if old not in text:
-              raise SystemExit("search failure block not found")
+          async function getGdUrl('''
 
-          text = text.replace(old, new, 1)
+          text = text[:match.start()] + replacement + text[match.end():]
           path.write_text(text)
-          print("✓ Search fallback patched")
+          print("✓ Search fallback patched by function replacement")
           PY
 
       - name: Install WhyMusic dependencies
