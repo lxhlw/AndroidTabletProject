@@ -190,6 +190,6 @@ export {`,
   'recommendWhyMusic',
 )
 
-source = source.replaceAll('\\\\`', '`').replaceAll('\\\\${', '${')
+source = source.replaceAll("\\`", "`").replaceAll("\\${", "${")
 writeFileSync(path, source)
 console.log('✓ WhyMusic worker fallbacks patched')
