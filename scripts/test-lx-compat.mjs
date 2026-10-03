@@ -77,22 +77,23 @@ const sixyinPluginFetch = async (input, init = {}) => {
   const url = String(input)
   const method = String(init?.method || 'GET').toUpperCase()
   requests.push({ url, method })
-  // SixYin is an obfuscated real-world LX source.  The bridge only needs a
-  // successful JSON-shaped media response here; the purpose of this test is
-  // to prove the exact production source can execute through our sandbox and
-  // request bridge, not to depend on third-party search availability.
-  const fakeUrl = 'https://example.com/sixyin-smoke-audio.mp3'
-  return new Response(JSON.stringify({
-    code: 200,
-    status: 200,
-    url: fakeUrl,
-    data: { url: fakeUrl },
-    result: { url: fakeUrl },
-    body: { url: fakeUrl },
-  }), {
-    status: 200,
-    headers: { 'content-type': 'application/json' },
-  })
+  if (url.startsWith('https://whymusic-l101.pages.dev/api/proxy?')) {
+    const response = await fetch(url, {
+      method,
+      headers: init?.headers,
+      body: method === 'GET' || method === 'HEAD' ? undefined : init?.body,
+      cache: 'no-store',
+    })
+    const body = await response.text()
+    if (!response.ok) {
+      throw new Error('SixYin production proxy HTTP ' + response.status + ': ' + body.slice(0, 300))
+    }
+    return new Response(body, {
+      status: response.status,
+      headers: { 'content-type': response.headers.get('content-type') || 'application/json' },
+    })
+  }
+  return fetch(input, init)
 }
 
 let sixyinPlugin
