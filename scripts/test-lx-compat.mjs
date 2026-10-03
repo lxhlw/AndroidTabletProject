@@ -142,17 +142,27 @@ if (!lyric || typeof lyric.rawLrc !== 'string') {
 
 console.log('✓ LX request() bridge reached the WhyMusic proxy')
 
-const artwork = await plugin.getArtwork({
-  id: 'wy-id-1',
+await plugin.getMediaSource({
+  id: 'tx-mid-1',
   title: 'Smoke Test',
   artist: 'Test Artist',
-  subSource: 'wy',
-  lxInfo: { id: 'wy-id-1', songmid: 'wy-id-1', name: 'Smoke Test', singer: 'Test Artist' },
+  subSource: 'tx',
+  lxInfo: { songmid: 'tx-mid-1', strMediaMid: 'tx-media-1', name: 'Smoke Test', singer: 'Test Artist' },
+  lxAlternatives: [],
+}, '128')
+
+const artwork = await plugin.getArtwork({
+  id: 'tx-mid-1',
+  title: 'Smoke Test',
+  artist: 'Test Artist',
+  subSource: 'tx',
+  lxInfo: { songmid: 'tx-mid-1', strMediaMid: 'tx-media-1', name: 'Smoke Test', singer: 'Test Artist' },
 })
 
-if (!artwork || typeof artwork !== 'string' || !artwork.includes('example.com')) {
+if (!artwork || typeof artwork !== 'string' || artwork !== 'https://example.com/fake-cover.jpg') {
   throw new Error('LX pic bridge returned an invalid artwork URL')
 }
+
 console.log('✓ LX pic handler bridge works')
 console.log('✓ LX playback works for wy / tx / kg / kw / mg')
 console.log('✓ LX lyric handler bridge works')
