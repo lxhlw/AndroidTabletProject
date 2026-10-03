@@ -258,8 +258,18 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
   }
 
 
-  function lxMd5(input: string): string {
-    const bytes = new TextEncoder().encode(String(input))
+  const lxBytesForHash = (value: any): Uint8Array => {
+    if (value instanceof Uint8Array) return new Uint8Array(value)
+    if (ArrayBuffer.isView(value)) {
+      return new Uint8Array(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength))
+    }
+    if (value instanceof ArrayBuffer) return new Uint8Array(value.slice(0))
+    if (Array.isArray(value)) return new Uint8Array(value)
+    return new TextEncoder().encode(String(value ?? ''))
+  }
+
+  function lxMd5(input: any): string {
+    const bytes = lxBytesForHash(input)
     const bitLen = bytes.length * 8
     const len = ((bytes.length + 9 + 63) >> 6) << 6
     const msg = new Uint8Array(len)
@@ -487,6 +497,7 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
   }
 
   const aesEncrypt = (input: any, mode = 'aes-128-ecb', key: any, iv?: any) => {
+    try {
     const data = lxBytes(input)
     const keyBytes = lxBytes(key)
     if (![16, 24, 32].includes(keyBytes.length)) throw new Error('LX AES key must be 128/192/256 bit (mode=' + String(mode) + ', keyBytes=' + keyBytes.length + ', keyType=' + typeof key + ', keyCtor=' + (key?.constructor?.name || 'none') + ')')
@@ -505,7 +516,10 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
       out.set(enc, off)
       if (name.endsWith('-cbc')) prev = enc
     }
-    return out
+      return out
+    } catch (err) {
+      throw new Error('LX AES internal failure: ' + String((err as any)?.message || err))
+    }
   }
 
   const derBytes = (pemOrDer: any) => {
@@ -576,6 +590,7 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
   }
 
   const rsaEncrypt = (input: any, key: any) => {
+    try {
     const data = lxBytes(input)
     const { n, e, size } = rsaPublicParts(key)
     if (data.length > size) throw new Error('LX RSA plaintext is larger than key size')
@@ -593,7 +608,10 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
       }
       return bigIntToBytes(result, size)
     })()
-    return c
+      return c
+    } catch (err) {
+      throw new Error('LX RSA internal failure: ' + String((err as any)?.message || err))
+    }
   }
 
   fakeLX.utils = {
