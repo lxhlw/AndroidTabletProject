@@ -107,6 +107,28 @@ try {
 
   console.log('✓ Browser reload restored the persisted LX source')
 
+  // Keep only the real SixYin LX source enabled so the browser search result
+  // cannot be satisfied by the bundled/official source instead.
+  await page.evaluate(() => {
+    const plugins = JSON.parse(localStorage.getItem('musicfree-plugins') || '[]')
+    const onlySixYin = plugins.map((p) => ({
+      ...p,
+      enabled: p?.name === '六音音源',
+    }))
+    localStorage.setItem('musicfree-plugins', JSON.stringify(onlySixYin))
+  })
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.waitForFunction(() => {
+    try {
+      const plugins = JSON.parse(localStorage.getItem('musicfree-plugins') || '[]')
+      return plugins.some((p) => p?.name === '六音音源' && p.enabled === true)
+        && plugins.filter((p) => p?.enabled === true).every((p) => p?.name === '六音音源')
+    } catch {
+      return false
+    }
+  })
+  console.log('✓ Browser search isolation left only SixYin enabled')
+
   await page.getByRole('button', { name: '搜尋', exact: true }).last().click()
   const searchBox = page.getByPlaceholder('歌曲、歌手或專輯', { exact: true })
   await searchBox.fill('周杰伦')
