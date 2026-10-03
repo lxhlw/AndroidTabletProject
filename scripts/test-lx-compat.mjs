@@ -7,11 +7,18 @@ if (!tsPath) throw new Error('WHYMUSIC_TYPESCRIPT is not set')
 const tsModule = await import(pathToFileURL(tsPath).href)
 const tsCompiler = tsModule.default || tsModule
 
-const sourceUrl = 'https://raw.githubusercontent.com/cdyUuu/lx-music-xinghai-source/main/xinghai-music-source.js'
-const sourceCode = await (await fetch(sourceUrl)).text()
+const sourceUrls = [
+  'https://raw.githubusercontent.com/cdyUuu/lx-music-xinghai-source/main/xinghai-music-source.js',
+  'https://raw.githubusercontent.com/wangxanshen/lx-music-source/main/gdstudio-source.js',
+]
+const sourceCodes = await Promise.all(sourceUrls.map(async (sourceUrl) => (await fetch(sourceUrl)).text()))
+const sourceCode = sourceCodes[0]
+const gdstudioCode = sourceCodes[1]
 
-if (!sourceCode.includes('globalThis.lx')) throw new Error('LX sample missing globalThis.lx')
-if (!sourceCode.includes('EVENT_NAMES.inited')) throw new Error('LX sample missing EVENT_NAMES.inited')
+for (const [label, code] of [['xinghai', sourceCode], ['gdstudio', gdstudioCode]]) {
+  if (!/(?:globalThis|window)\\.lx/.test(code)) throw new Error('LX sample missing globalThis.lx: ' + label)
+  if (!/EVENT_NAMES\\.inited/.test(code)) throw new Error('LX sample missing EVENT_NAMES.inited: ' + label)
+}
 for (const key of ['wy', 'tx', 'kg', 'kw', 'mg']) {
   if (!sourceCode.includes(key)) {
     throw new Error('LX sample missing platform ' + key)
@@ -43,6 +50,8 @@ const fakeConsole = {
   warn() {},
   info() {},
   error() {},
+  group() {},
+  groupEnd() {},
 }
 
 const fakeResponse = (body, status = 200) => new Response(JSON.stringify(body), {
@@ -182,3 +191,47 @@ if (searchResult.data[0].subSource !== 'tx') {
 }
 
 console.log('✓ LX search aggregation keeps successful sources when others fail')
+
+const gdRequests = []
+const gdPluginFetch = async (input, init = {}) => {
+  const url = String(input)
+  gdRequests.push({ url, method: init?.method || 'GET' })
+  if (url.startsWith('https://whymusic-l101.pages.dev/api/proxy?')) {
+    const target = decodeURIComponent(new URL(url).searchParams.get('url') || '')
+    if (target.includes('types=search')) {
+      return fakeResponse([
+        { id: 'gd-1', name: '晴天', artist: ['周杰伦'], source: 'netease', lyric_id: 'gd-1', pic_id: 'pic-1' },
+      ])
+    }
+    if (target.includes('types=url')) {
+      return fakeResponse({ url: 'https://example.com/gdstudio-audio.mp3' })
+    }
+  }
+  return fakeResponse({ code: 200, url: 'https://example.com/gdstudio-audio.mp3' })
+}
+
+const gdPlugin = buildLXPlugin(gdstudioCode, {
+  pluginFetch: gdPluginFetch,
+  requireFn: (name) => { throw new Error('unexpected require: ' + name) },
+  console: fakeConsole,
+})
+
+console.log('✓ Second real LX source parsed and initialized: gdstudio')
+
+const gdResult = await gdPlugin.getMediaSource({
+  id: 'gd-song-1',
+  title: '晴天',
+  artist: '周杰伦',
+  subSource: 'wy',
+  lxInfo: { id: 'gd-song-1', songmid: 'gd-song-1', name: '晴天', singer: '周杰伦' },
+  lxAlternatives: [],
+}, '128')
+
+if (!gdResult?.url || gdResult.source !== 'wy') {
+  throw new Error('Second real LX source playback bridge failed')
+}
+if (!gdRequests.some(r => r.url.includes('/api/proxy?'))) {
+  throw new Error('Second real LX source did not exercise the WhyMusic proxy')
+}
+
+console.log('✓ Second real LX source musicUrl handler works')
