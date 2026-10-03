@@ -65,10 +65,10 @@ unlinkSync(tempPath)
 
 const requests = []
 const fakeConsole = {
-  log() {},
-  warn() {},
-  info() {},
-  error() {},
+  log(...args) { console.log('[SixYin]', ...args) },
+  warn(...args) { console.log('[SixYin:warn]', ...args) },
+  info(...args) { console.log('[SixYin:info]', ...args) },
+  error(...args) { console.log('[SixYin:error]', ...args) },
   group() {},
   groupEnd() {},
 }
@@ -77,6 +77,7 @@ const sixyinPluginFetch = async (input, init = {}) => {
   const url = String(input)
   const method = String(init?.method || 'GET').toUpperCase()
   requests.push({ url, method })
+  console.log('[SixYin:request] ' + method + ' ' + url)
   if (url.startsWith('https://whymusic-l101.pages.dev/api/proxy?')) {
     const response = await fetch(url, {
       method,
@@ -85,6 +86,10 @@ const sixyinPluginFetch = async (input, init = {}) => {
       cache: 'no-store',
     })
     const body = await response.text()
+    if (url.includes('hibai.cn')) {
+      console.log('[SixYin:proxy] hibai status=' + response.status + ' content-type=' + (response.headers.get('content-type') || ''))
+      console.log('[SixYin:proxy] hibai body=' + body.slice(0, 1000))
+    }
     if (!response.ok) {
       throw new Error('SixYin production proxy HTTP ' + response.status + ': ' + body.slice(0, 300))
     }
