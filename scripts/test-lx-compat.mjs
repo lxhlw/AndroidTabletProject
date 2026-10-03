@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-const tsModule = await import('typescript')
+const tsModule = await import('../whymusic-source/node_modules/typescript/lib/typescript.js')
 const tsCompiler = tsModule.default || tsModule
 
 const sourceUrl = 'https://raw.githubusercontent.com/cdyUuu/lx-music-xinghai-source/main/xinghai-music-source.js'
@@ -16,7 +16,7 @@ for (const key of ['wy', 'tx', 'kg', 'kw', 'mg']) {
   }
 }
 
-const lxTsPath = 'packages/web/src/core/plugin/lxCompat.ts'
+const lxTsPath = 'whymusic-source/packages/web/src/core/plugin/lxCompat.ts'
 let tsSource = readFileSync(lxTsPath, 'utf8')
 tsSource = tsSource.replace("import { Plugin } from '../types'\\n", '')
 
