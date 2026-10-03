@@ -154,6 +154,80 @@ jobs:
           }'''
           text = text[:media_match.start()] + media_replacement + text[media_match.end():]
 
+          # 4) 推荐：GD 榜单不可用时，直接使用网易云歌单详情兜底。
+          if "async function recommendWhyMusicNetease(" not in text:
+              helper = r'''
+          async function recommendWhyMusicNetease(category = DEFAULT_CATEGORY, limit = 40, seed = '0') {
+            const cat = GD_CATEGORIES[category] || GD_CATEGORIES[DEFAULT_CATEGORY]
+            const data = await neteaseFetch(
+              '/api/v6/playlist/detail?id=' + encodeURIComponent(cat.list),
+            )
+            const tracks = (data && data.playlist && data.playlist.tracks) || []
+            const items = tracks.map(gdTrackToItem).filter(Boolean)
+            if (!items.length) return []
+            return dailyShuffle(items, limit, cat.list + ':' + seed)
+          }
+
+          '''
+              text = text.replace(
+                  "/**
+ * 推薦：取一份榜單、去重、裁到 limit。",
+                  helper + "/**
+ * 推薦：取一份榜單、去重、裁到 limit。",
+                  1,
+              )
+
+          rec_pattern = re.compile(
+              r"async function recommendWhyMusic\(category = DEFAULT_CATEGORY, limit = 40, seed = '0'\) \{.*?\n\}\n\nexport \{",
+              re.S,
+          )
+          rec_match = rec_pattern.search(text)
+          if not rec_match:
+              raise SystemExit("recommendWhyMusic function not found")
+
+          rec_replacement = r'''async function recommendWhyMusic(category = DEFAULT_CATEGORY, limit = 40, seed = '0') {
+            const cat = GD_CATEGORIES[category] || GD_CATEGORIES[DEFAULT_CATEGORY]
+            const orders = cat.orders || ['chart']
+            const bucket = Math.floor(Date.now() / ROTATE_BUCKET_MS)
+            const cacheKey = `rec:${cat.list}:${orders.join('+')}:${limit}:${bucket}:${seed}`
+            const cached = gdCacheGet(cacheKey)
+            if (cached !== undefined) return cached
+
+            let tracks = []
+            try {
+              const data = await gdRequest('playlist', { source: 'netease', id: cat.list })
+              tracks = data?.playlist?.tracks || []
+            } catch (err) {
+              console.error('[why] GD recommend failed:', err?.message)
+              const fallback = await recommendWhyMusicNetease(category, limit, seed)
+              gdCacheSet(cacheKey, fallback, GD_TTL.playlist)
+              return fallback
+            }
+
+            const buckets = orders.map(
+              order => sortTracks(tracks, order).map(gdTrackToItem).filter(Boolean),
+            )
+            const seen = new Set()
+            const merged = []
+            const maxLen = Math.max(0, ...buckets.map(b => b.length))
+            for (let idx = 0; idx < maxLen; idx++) {
+              for (const b of buckets) {
+                const item = b[idx]
+                if (!item) continue
+                const key = `${gdNormalizeName(item.title)}::${gdNormalizeName(item.artist)}`
+                if (seen.has(key)) continue
+                seen.add(key)
+                merged.push(item)
+              }
+            }
+            const out = dailyShuffle(merged, limit, `${cat.list}:${seed}`)
+            gdCacheSet(cacheKey, out, GD_TTL.playlist)
+            return out
+          }
+
+          export {'''
+          text = text[:rec_match.start()] + rec_replacement + text[rec_match.end():]
+
           # 3) 歌词：失败时返回空歌词，避免把播放流程变成 500。
           lyric_pattern = re.compile(
               r"async function getWhyMusicLyric\(lyricId, source\) \{.*?\n\}\n\nasync function getWhyMusicPic",
@@ -214,6 +288,8 @@ jobs:
           echo "✓ Search fallback is included in Worker bundle"
           grep -q 'getNeteaseOuterUrl' packages/web/dist/_worker.js
           echo "✓ Netease media URL fallback is included in Worker bundle"
+          grep -q 'recommendWhyMusicNetease' packages/web/dist/_worker.js
+          echo "✓ Netease recommendation fallback is included in Worker bundle"
 
       - name: Deploy WhyMusic
         working-directory: whymusic-source
