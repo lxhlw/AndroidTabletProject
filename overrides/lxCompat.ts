@@ -280,7 +280,7 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
       if (type !== 'music') return { data: [], isEnd: true }
 
       const activeSources = await getSources()
-      const buckets = await Promise.all(
+      const settled = await Promise.allSettled(
         activeSources.map(async ([source]) => {
           const apiSource = LX_TO_GD[source] || source
           const url = LX_COMPAT_API + '/api/lx-search?source=' + encodeURIComponent(apiSource)
@@ -297,6 +297,11 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
             .filter(Boolean)
         }),
       )
+      const buckets = settled.map((result, index) => {
+        if (result.status === 'fulfilled') return result.value
+        deps.console.warn('[LX] search failed ' + activeSources[index][0], result.reason)
+        return []
+      })
 
       const merged = new Map<string, any>()
       for (const bucket of buckets) {
@@ -317,7 +322,7 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
 
       return {
         data: Array.from(merged.values()),
-        isEnd: buckets.every(bucket => bucket.length < 20),
+        isEnd: settled.every(result => result.status === 'fulfilled' && result.value.length < 20),
       }
     },
 
