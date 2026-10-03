@@ -41,7 +41,21 @@ const transpiled = tsCompiler.transpileModule(tsSource, {
 const tempPath = join(tmpdir(), 'lxCompat-smoke.mjs')
 writeFileSync(tempPath, transpiled, 'utf8')
 
-const { buildLXPlugin } = await import(pathToFileURL(tempPath).href)
+const { buildLXPlugin, isLXMusicSourceCode } = await import(pathToFileURL(tempPath).href)
+
+const detectorCases = [
+  ['dot notation', "globalThis.lx.EVENT_NAMES.inited", true],
+  ['bracket notation', "globalThis['lx'].EVENT_NAMES['inited']", true],
+  ['ordinary CommonJS', "module.exports = { name: 'Normal Plugin', platform: 'normal' }", false],
+  ['plain JavaScript with lx text but no init', "globalThis.lx = {}; console.log('inited')", false],
+  ['explicit CommonJS plus LX markers', "globalThis.lx; EVENT_NAMES.inited; module.exports = {}", false],
+]
+for (const [label, code, expected] of detectorCases) {
+  const actual = isLXMusicSourceCode(code)
+  if (actual !== expected) throw new Error('LX detector regression: ' + label + ' -> ' + actual)
+  console.log('✓ LX detector: ' + label)
+}
+
 unlinkSync(tempPath)
 
 const requests = []
