@@ -84,7 +84,7 @@ if (musicApp.includes(metadataMarker)) {
 writeFileSync(musicAppPath, musicApp)
 
 // Allow LX source code through the URL installer validation.
-let musicApp = readFileSync(musicAppPath, 'utf8')
+musicApp = readFileSync(musicAppPath, 'utf8')
 const validationStart = musicApp.indexOf("  // 代理把上游錯誤也當內容回傳");
 const validationEnd = musicApp.indexOf("  return code", validationStart);
 if (validationStart < 0 || validationEnd < 0) throw new Error('LX patch: plugin validation markers not found');
