@@ -123,7 +123,7 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
         }
 
         const target = String(targetUrl)
-        const requestUrl = /^https?:\\/\\//i.test(target)
+        const requestUrl = /^https?:\/\//i.test(target)
           ? LX_COMPAT_API + '/api/proxy?url=' + encodeURIComponent(target)
             + '&method=' + encodeURIComponent(method)
           : target
