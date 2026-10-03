@@ -95,11 +95,19 @@ const sixyinPluginFetch = async (input, init = {}) => {
   })
 }
 
-const sixyinPlugin = buildLXPlugin(sixyinCode, {
-  pluginFetch: sixyinPluginFetch,
-  requireFn: (name) => { throw new Error('SixYin unexpected require: ' + name) },
-  console: fakeConsole,
-})
+let sixyinPlugin
+try {
+  sixyinPlugin = buildLXPlugin(sixyinCode, {
+    pluginFetch: sixyinPluginFetch,
+    requireFn: (name) => { throw new Error('SixYin unexpected require: ' + name) },
+    console: fakeConsole,
+  })
+} catch (err) {
+  console.error('SIXYIN_LOAD_ERROR_NAME=' + (err?.name || 'unknown'))
+  console.error('SIXYIN_LOAD_ERROR_MESSAGE=' + String(err?.message || err))
+  console.error('SIXYIN_LOAD_ERROR_STACK=' + String(err?.stack || '').split('\n').slice(0, 4).join(' | '))
+  throw err
+}
 
 const sixyinMedia = await sixyinPlugin.getMediaSource({
   id: 'sixyin-smoke-1',
