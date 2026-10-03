@@ -22,6 +22,10 @@ const LX_TO_GD: Record<string, string> = {
 }
 
 export function isLXMusicSourceCode(code: string): boolean {
+  const isCommonJSPlugin =
+    code.includes('module.exports')
+    || code.includes('exports.')
+
   const hasLXNamespace =
     code.includes('globalThis.lx')
     || code.includes("globalThis['lx']")
@@ -30,14 +34,19 @@ export function isLXMusicSourceCode(code: string): boolean {
     || code.includes("window['lx']")
     || code.includes('window["lx"]')
 
-  const hasInitEvent =
-    code.includes('EVENT_NAMES.inited')
-    || code.includes("EVENT_NAMES['inited']")
-    || code.includes('EVENT_NAMES["inited"]')
+  // Some real LX sources are bundled/minified and rewrite EVENT_NAMES.inited
+  // into computed property names, so the literal init event is not preserved.
+  const hasLXApiBinding =
+    /\b(?:const|let|var)\s*\{[^}]*\bEVENT_NAMES\s*[:=][^}]*\b(?:on|send|request)\s*[:=][^}]*\}\s*=\s*(?:globalThis|window)(?:\\.lx|\\[['"]lx['"]\\])/s.test(code)
+
+  const hasLXAction =
+    code.includes('musicUrl')
+    || code.includes('getMediaSource')
 
   return hasLXNamespace
-    && hasInitEvent
-    && !code.includes('module.exports =')
+    && hasLXApiBinding
+    && hasLXAction
+    && !isCommonJSPlugin
 }
 
 function lxMeta(code: string): {
