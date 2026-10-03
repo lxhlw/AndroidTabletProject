@@ -102,7 +102,8 @@ const validationBlock = `  // 代理把上游錯誤也當內容回傳，這裡�
     || code.includes("window['lx']")
     || code.includes('window["lx"]')
   const hasLXApiBinding =
-    /\\b(?:const|let|var)\\s*\\{[^}]*\\bEVENT_NAMES\\s*[:=][^}]*\\b(?:on|send|request)\\s*[:=][^}]*\\}\\s*=\\s*(?:globalThis|window)(?:\\\\.lx|\\\\[['"]lx['"]\\\\])/s.test(code)
+    /(?:const|let|var)\\s*\\{[^}]*\\bEVENT_NAMES\\b[^}]*\\b(?:on|send|request)\\b[^}]*\\}\\s*=\\s*(?:globalThis|window)(?:\\.lx|\\[['"]lx['"])/s.test(code)
+ 
   const hasLXAction =
     code.includes('musicUrl')
     || code.includes('getMediaSource')
