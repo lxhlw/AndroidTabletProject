@@ -723,6 +723,9 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
     for (const handler of requestHandlers) {
       try {
         const value = await Promise.resolve(handler({ source, action, info }))
+        if (action === 'musicUrl') {
+          deps.console.log('[LX] invoke result source=' + source + ' type=' + typeof value + ' value=' + (typeof value === 'string' ? value.slice(0, 220) : String(value)))
+        }
         if (value !== undefined && value !== null && value !== '') return value
       } catch (err) {
         last = err
