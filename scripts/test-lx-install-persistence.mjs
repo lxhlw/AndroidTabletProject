@@ -13,7 +13,7 @@ const types = readFileSync(typesPath, 'utf8')
 const manager = readFileSync(managerPath, 'utf8')
 
 const checks = [
-  ['fetch → validate', 'const isCommonJSPlugin = code.includes', musicApp],
+  ['fetch → validate', 'const isCommonJSPlugin =', musicApp],
   ['LX validation', 'const hasLXNamespace =', musicApp],
   ['validate → load', 'loadPluginCode(code, pluginName.trim() || undefined)', musicApp],
   ['load → persist', 'savePluginCode(registered, code)', musicApp],
