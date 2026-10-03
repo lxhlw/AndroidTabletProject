@@ -133,6 +133,7 @@ function lxQuality(requested: string, available: string[]): string {
 export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
   const meta = lxMeta(code)
   const requestHandlers: any[] = []
+  let activeInvokeContext: { source: string, action: string, result: any } | null = null
   let initPayload: any = null
   let initResolve: ((value: any) => void) | null = null
   let initReject: ((reason?: any) => void) | null = null
@@ -218,14 +219,29 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
           if (!compatBody?.url) {
             throw new Error('LX legacy URL bridge returned no media URL')
           }
+          const callbackBody = 'url=' + compatBody.url
+          if (activeInvokeContext) activeInvokeContext.result = callbackBody
+          const legacyRawBytes = new TextEncoder().encode(callbackBody)
+          const legacyRaw = Object.assign(legacyRawBytes, {
+            toString(encoding?: string) {
+              if (!encoding || encoding === 'utf8' || encoding === 'utf-8') return callbackBody
+              if (encoding === 'base64') {
+                let binary = ''
+                for (const b of legacyRawBytes) binary += String.fromCharCode(b)
+                return btoa(binary)
+              }
+              if (encoding === 'hex') return Array.from(legacyRawBytes, b => b.toString(16).padStart(2, '0')).join('')
+              return callbackBody
+            },
+          })
           callback(null, {
             statusCode: 200,
             statusMessage: 'OK',
             headers: { 'content-type': 'text/plain; charset=utf-8' },
-            bytes: compatBody.url.length + 4,
-            raw: new TextEncoder().encode('url=' + compatBody.url),
-            body: 'url=' + compatBody.url,
-          }, 'url=' + compatBody.url)
+            bytes: legacyRawBytes.length,
+            raw: legacyRaw,
+            body: callbackBody,
+          }, callbackBody)
           return
         }
 
@@ -721,14 +737,24 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
   const invoke = async (source: string, action: string, info: any) => {
     let last: any = null
     for (const handler of requestHandlers) {
+      const context = { source, action, result: null as any }
+      const previous = activeInvokeContext
+      activeInvokeContext = context
       try {
         const value = await Promise.resolve(handler({ source, action, info }))
-        if (action === 'musicUrl') {
-          deps.console.log('[LX] invoke result source=' + source + ' type=' + typeof value + ' value=' + (typeof value === 'string' ? value.slice(0, 220) : String(value)))
-        }
         if (value !== undefined && value !== null && value !== '') return value
+
+        // 少数旧版 LX 音源会通过 lx.request(callback) 得到最终值，
+        // 但 handler 本身不会把 Promise 结果继续 return。仅对 musicUrl
+        // 使用 callback result 作为兼容兜底，避免影响 search/pic/lyric。
+        if (action === 'musicUrl' && typeof context.result === 'string') {
+          const match = context.result.match(/^url=(.+)$/s)
+          if (match?.[1]) return match[1].trim()
+        }
       } catch (err) {
         last = err
+      } finally {
+        activeInvokeContext = previous
       }
     }
     throw last || new Error('LX 音源没有返回结果')
