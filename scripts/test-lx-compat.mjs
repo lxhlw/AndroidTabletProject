@@ -275,3 +275,44 @@ if (!gdRequests.some(r => r.url.includes('/api/proxy?'))) {
 }
 
 console.log('✓ Second real LX source musicUrl handler works')
+
+const minimalLX = `
+/**
+ * @name Minimal LX Source
+ * @version 1.0.0
+ */
+const { EVENT_NAMES, on, send } = globalThis.lx
+on(EVENT_NAMES.request, ({ source, action, info }) => {
+  if (action !== 'musicUrl') throw new Error('unsupported action')
+  return Promise.resolve('https://example.com/minimal-lx.mp3')
+})
+send(EVENT_NAMES.inited, {
+  sources: {
+    wy: { name: '网易', type: 'music', actions: ['musicUrl'], qualitys: ['128k'] },
+  },
+})
+`
+
+const minimalPlugin = buildLXPlugin(minimalLX, {
+  pluginFetch,
+  requireFn: (name) => { throw new Error('unexpected require: ' + name) },
+  console: fakeConsole,
+})
+
+const minimalResult = await minimalPlugin.getMediaSource({
+  id: 'minimal-1',
+  title: 'Minimal LX',
+  artist: 'Test Artist',
+  subSource: 'wy',
+  lxInfo: { id: 'minimal-1', songmid: 'minimal-1', name: 'Minimal LX', singer: 'Test Artist' },
+  lxAlternatives: [],
+}, '128')
+
+if (minimalResult?.url !== 'https://example.com/minimal-lx.mp3' || minimalResult.source !== 'wy') {
+  throw new Error('Minimal official-style LX source failed musicUrl compatibility')
+}
+if (typeof minimalPlugin.getLyric !== 'function' || typeof minimalPlugin.getArtwork !== 'function') {
+  throw new Error('LX runtime optional methods were not exposed')
+}
+
+console.log('✓ Minimal official-style LX source works with musicUrl-only protocol')
