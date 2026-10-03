@@ -175,7 +175,7 @@ jobs:
 
           echo "LX platform smoke tests..."
           lx_failures=0
-          for platform in netease qq kugou kuwo; do
+          for platform in netease qq kugou kuwo migu; do
             lx_body_file="/tmp/lx-${platform}.json"
             lx_status="$(curl -sS --max-time 30 --get -o "$lx_body_file" -w '%{http_code}' "$BASE_URL/api/lx-search" \
               --data-urlencode "source=$platform" \
@@ -185,9 +185,9 @@ jobs:
             lx_body="$(cat "$lx_body_file")"
             echo "$platform HTTP $lx_status -> $lx_body"
             if [ "$lx_status" = "200" ] && echo "$lx_body" | jq -e '.data | type == "array" and length >= 1' >/dev/null; then
-              echo "✓ LX search works: $platform"
+              echo "✓ LX direct search works: $platform"
             else
-              echo "✘ LX search failed: $platform"
+              echo "✘ LX direct search failed: $platform"
               lx_failures=$((lx_failures + 1))
             fi
           done
