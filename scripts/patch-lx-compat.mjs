@@ -290,6 +290,9 @@ if (!index.includes("case '/api/lx-search':")) {
   if (!index.includes('  searchWhyMusicPlatform,\n')) {
     index = index.replace('  searchWhyMusic,\n', '  searchWhyMusic,\n  searchWhyMusicPlatform,\n')
   }
+  if (!index.includes('  lxDirectMusicUrl,\n')) {
+    index = index.replace('  searchWhyMusicPlatform,\n', '  searchWhyMusicPlatform,\n  lxDirectMusicUrl,\n')
+  }
 
   const marker = "    case '/api/why-search': {"
   const at = index.indexOf(marker)
