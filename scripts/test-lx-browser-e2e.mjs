@@ -2,6 +2,9 @@ import { chromium } from 'playwright'
 
 const baseUrl = process.env.BASE_URL || 'https://whymusic-l101.pages.dev'
 const sourceUrl = 'https://raw.githubusercontent.com/cdyUuu/lx-music-xinghai-source/main/xinghai-music-source.js'
+const isLXCode = (code) => /(?:globalThis|window)(?:\\.lx|\\[\\s*['\"]lx['\"]\\s*\\])/.test(code)
+  && /EVENT_NAMES(?:\\.inited|\\[\\s*['\"]inited['\"]\\s*\\])/.test(code)
+  && !code.includes('module.exports =')
 
 const browser = await chromium.launch({
   headless: true,
