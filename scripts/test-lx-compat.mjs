@@ -72,24 +72,48 @@ const plugin = buildLXPlugin(sourceCode, {
   console: fakeConsole,
 })
 
-const result = await plugin.getMediaSource({
-  id: '123456',
+const cases = [
+  { source: 'wy', id: 'wy-id-1', info: { id: 'wy-id-1', songmid: 'wy-id-1', name: 'Smoke Test', singer: 'Test Artist' } },
+  { source: 'tx', id: 'tx-mid-1', info: { songmid: 'tx-mid-1', strMediaMid: 'tx-media-1', name: 'Smoke Test', singer: 'Test Artist' } },
+  { source: 'kg', id: 'kg-hash-1', info: { hash: 'kg-hash-1', songmid: 'kg-hash-1', albumId: 'kg-album-1', name: 'Smoke Test', singer: 'Test Artist' } },
+  { source: 'kw', id: 'kw-mid-1', info: { songmid: 'kw-mid-1', name: 'Smoke Test', singer: 'Test Artist' } },
+  { source: 'mg', id: 'mg-id-1', info: { songmid: 'mg-id-1', name: 'Smoke Test', singer: 'Test Artist' } },
+]
+
+console.log('✓ Real LX source parsed and initialized')
+
+for (const item of cases) {
+  const result = await plugin.getMediaSource({
+    id: item.id,
+    title: 'Smoke Test',
+    artist: 'Test Artist',
+    subSource: item.source,
+    lxInfo: item.info,
+    lxAlternatives: [],
+  }, '128')
+
+  if (!result?.url || result.source !== item.source) {
+    throw new Error('LX playback bridge failed for ' + item.source)
+  }
+  console.log('✓ LX musicUrl handler works: ' + item.source)
+}
+
+if (!requests.some(r => r.url.includes('/api/proxy?'))) {
+  throw new Error('LX request bridge was never exercised')
+}
+
+const lyric = await plugin.getLyric({
+  id: 'wy-id-1',
   title: 'Smoke Test',
   artist: 'Test Artist',
   subSource: 'wy',
-  lxInfo: { id: '123456', songmid: '123456', name: 'Smoke Test', singer: 'Test Artist' },
-  lxAlternatives: [
-    { id: 'qq-mid-1', source: 'tx', lxInfo: { songmid: 'qq-mid-1', name: 'Smoke Test', singer: 'Test Artist' } },
-    { id: 'kg-hash-1', source: 'kg', lxInfo: { hash: 'kg-hash-1', name: 'Smoke Test', singer: 'Test Artist' } },
-    { id: 'kw-mid-1', source: 'kw', lxInfo: { songmid: 'kw-mid-1', name: 'Smoke Test', singer: 'Test Artist' } },
-    { id: 'mg-id-1', source: 'mg', lxInfo: { songmid: 'mg-id-1', name: 'Smoke Test', singer: 'Test Artist' } },
-  ],
-}, '128')
+  lxInfo: { id: 'wy-id-1', songmid: 'wy-id-1', name: 'Smoke Test', singer: 'Test Artist' },
+})
 
-if (!result?.url || result.source !== 'wy') throw new Error('LX playback bridge did not return the primary source URL')
-if (!requests.some(r => r.url.includes('/api/proxy?'))) throw new Error('LX request bridge was never exercised')
+if (!lyric || typeof lyric.rawLrc !== 'string') {
+  throw new Error('LX lyric bridge returned an invalid payload')
+}
 
-console.log('✓ Real LX source parsed and initialized')
-console.log('✓ LX getMediaSource executed the real musicUrl handler')
 console.log('✓ LX request() bridge reached the WhyMusic proxy')
-console.log('✓ Primary LX source wy returned a playable URL')
+console.log('✓ LX playback works for wy / tx / kg / kw / mg')
+console.log('✓ LX lyric handler bridge works')
