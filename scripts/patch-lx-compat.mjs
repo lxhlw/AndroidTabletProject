@@ -1,6 +1,8 @@
 import { readFileSync, writeFileSync, copyFileSync } from 'node:fs'
 
 const runnerPath = 'packages/web/src/core/plugin/runner.ts'
+const managerPath = 'packages/web/src/core/plugin/manager.ts'
+const typesPath = 'packages/web/src/core/types.ts'
 const musicAppPath = 'packages/web/src/musicApp.ts'
 const whyPath = 'packages/web/worker/why.js'
 const indexPath = 'packages/web/worker/index.js'
@@ -30,6 +32,56 @@ if (!runner.includes('buildLXPlugin(code, {')) {
   )
 }
 writeFileSync(runnerPath, runner)
+
+// Expose optional artwork capability in the shared plugin contract.
+let types = readFileSync(typesPath, 'utf8')
+if (!types.includes('getArtwork?(item: MusicItem): Promise<any>')) {
+  const marker = "  getLyric?(item: MusicItem): Promise<any>\n"
+  if (!types.includes(marker)) throw new Error('LX patch: Plugin type lyric marker not found')
+  types = types.replace(marker, "  getArtwork?(item: MusicItem): Promise<any>\n" + marker)
+}
+writeFileSync(typesPath, types)
+
+// PluginManager: add a neutral artwork bridge; non-LX plugins remain unchanged.
+let manager = readFileSync(managerPath, 'utf8')
+if (!manager.includes('async getArtwork(plugin: Plugin, item: MusicItem): Promise<string>')) {
+  const marker = "  async getLyric(plugin: Plugin, item: MusicItem): Promise<string> {\n"
+  const at = manager.indexOf(marker)
+  if (at < 0) throw new Error('LX patch: PluginManager lyric marker not found')
+  const method = `  async getArtwork(plugin: Plugin, item: MusicItem): Promise<string> {
+    if (!plugin.getArtwork) return ''
+    const result: any = await plugin.getArtwork(item)
+    if (typeof result === 'string') return result
+    return String(result?.url || result?.artwork || result?.pic || '')
+  }
+
+`
+  manager = manager.slice(0, at) + method + manager.slice(at)
+}
+writeFileSync(managerPath, manager)
+
+// Playback metadata: lazily resolve LX pic only when artwork is missing.
+let musicApp = readFileSync(musicAppPath, 'utf8')
+const metadataMarker = "      // 播放前就把 metadata 設好 —— Android 是在取得 audio focus 的那一刻讀它，\n      // 等 React effect 跑就太晚了（詳見 applyMediaMetadata)\n      applyMediaMetadata(item)\n"
+if (musicApp.includes(metadataMarker)) {
+  const replacement = `      // LX 音源可能只提供 pic action；只有缺少 artwork 時才補抓，避免每首歌重複請求。
+      let metadataItem = item
+      if (!metadataItem.artwork && typeof pluginManager.getArtwork === 'function') {
+        try {
+          const artwork = await pluginManager.getArtwork(plugin, metadataItem)
+          if (artwork) metadataItem = { ...metadataItem, artwork }
+        } catch {
+          // 封面是 metadata 的增強信息，失败不应影响播放。
+        }
+      }
+
+      // 播放前就把 metadata 設好 —— Android 是在取得 audio focus 的那一刻讀它，
+      // 等 React effect 跑就太晚了（詳見 applyMediaMetadata）
+      applyMediaMetadata(metadataItem)
+`
+  musicApp = musicApp.replace(metadataMarker, replacement)
+}
+writeFileSync(musicAppPath, musicApp)
 
 // Allow LX source code through the URL installer validation.
 let musicApp = readFileSync(musicAppPath, 'utf8')
