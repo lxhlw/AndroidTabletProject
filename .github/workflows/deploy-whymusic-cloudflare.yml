@@ -220,7 +220,7 @@ jobs:
           echo "✓ Production proxy can fetch and return the real LX source code"
           echo "Verifying production frontend bundle contains LX compatibility..."
           homepage_html="$(curl -fsSL --max-time 30 "$BASE_URL/")"
-          bundle_path="$(printf '%s\n' "$homepage_html" | sed -n 's/.*src="\([^"]*\.js\)".*/\1/p' | head -n 1)"
+          bundle_path="$(printf '%s\n' "$homepage_html" | grep -oE 'src=["'"'"'][^"'"'"']+\.js["'"'"']' | head -n 1 | sed -E 's/^src=["'"'"']|["'"'"']$//g')"
           test -n "$bundle_path"
           case "$bundle_path" in
             http*) bundle_url="$bundle_path" ;;
