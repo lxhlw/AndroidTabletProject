@@ -22,12 +22,22 @@ const LX_TO_GD: Record<string, string> = {
 }
 
 export function isLXMusicSourceCode(code: string): boolean {
-  const hasLXNamespace = /(?:globalThis|window)(?:\\.lx|\\[\\s*['"]lx['"]\\s*\\])/.test(code)
-  const hasInitEvent = /EVENT_NAMES(?:\\.inited|\\[\\s*['"]inited['"]\\s*\\])/.test(code)
-    || /['"]inited['"]/.test(code)
+  const hasLXNamespace =
+    code.includes('globalThis.lx')
+    || code.includes("globalThis['lx']")
+    || code.includes('globalThis["lx"]')
+    || code.includes('window.lx')
+    || code.includes("window['lx']")
+    || code.includes('window["lx"]')
+
+  const hasInitEvent =
+    code.includes('EVENT_NAMES.inited')
+    || code.includes("EVENT_NAMES['inited']")
+    || code.includes('EVENT_NAMES["inited"]')
+
   return hasLXNamespace
     && hasInitEvent
-    && !/module\\.exports\\s*=/.test(code)
+    && !code.includes('module.exports =')
 }
 
 function lxMeta(code: string): {
