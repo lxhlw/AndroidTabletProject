@@ -10,14 +10,14 @@ const sourceCode = await (await fetch(sourceUrl)).text()
 if (!sourceCode.includes('globalThis.lx')) throw new Error('LX sample missing globalThis.lx')
 if (!sourceCode.includes('EVENT_NAMES.inited')) throw new Error('LX sample missing EVENT_NAMES.inited')
 for (const key of ['wy', 'tx', 'kg', 'kw', 'mg']) {
-  if (!new RegExp(`\\\\b${key}\\\\b`).test(sourceCode)) {
+  if (!new RegExp('\\\\b' + key + '\\\\b').test(sourceCode)) {
     throw new Error('LX sample missing platform ' + key)
   }
 }
 
 const lxTsPath = 'whymusic-source/packages/web/src/core/plugin/lxCompat.ts'
 let tsSource = readFileSync(lxTsPath, 'utf8')
-tsSource = tsSource.replace(/^import \\{ Plugin \\} from ['"]\\.\\.\\/types['"];?\\s*/m, '')
+tsSource = tsSource.replace("import { Plugin } from '../types'\\n", '')
 
 const transpiled = ts.transpileModule(tsSource, {
   compilerOptions: {
