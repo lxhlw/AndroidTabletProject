@@ -16,8 +16,8 @@ const sourceCode = sourceCodes[0]
 const gdstudioCode = sourceCodes[1]
 
 for (const [label, code] of [['xinghai', sourceCode], ['gdstudio', gdstudioCode]]) {
-  if (!/(?:globalThis|window)\\.lx/.test(code)) throw new Error('LX sample missing globalThis.lx: ' + label)
-  if (!/EVENT_NAMES\\.inited/.test(code)) throw new Error('LX sample missing EVENT_NAMES.inited: ' + label)
+  if (!/(?:globalThis|window)\.lx/.test(code)) throw new Error('LX sample missing globalThis.lx: ' + label)
+  if (/EVENT_NAMES\.inited/.test(code) === false) throw new Error('LX sample missing EVENT_NAMES.inited: ' + label)
 }
 for (const key of ['wy', 'tx', 'kg', 'kw', 'mg']) {
   if (!sourceCode.includes(key)) {
