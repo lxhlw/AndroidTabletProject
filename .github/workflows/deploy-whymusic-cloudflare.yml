@@ -176,16 +176,13 @@ jobs:
           echo "LX platform smoke tests..."
           lx_failures=0
           for platform in netease qq kugou kuwo; do
-            lx_response="$(curl -sS --max-time 30 --get -w '
-HTTP_STATUS:%{http_code}' "$BASE_URL/api/lx-search" \
+            lx_body_file="/tmp/lx-${platform}.json"
+            lx_status="$(curl -sS --max-time 30 --get -o "$lx_body_file" -w '%{http_code}' "$BASE_URL/api/lx-search" \
               --data-urlencode "source=$platform" \
               --data-urlencode 'q=周杰伦' \
               --data-urlencode 'page=1' \
               --data-urlencode 'count=3')"
-            lx_status="$(printf '%s
-' "$lx_response" | sed -n 's/^HTTP_STATUS://p')"
-            lx_body="$(printf '%s
-' "$lx_response" | sed '/^HTTP_STATUS:/d')"
+            lx_body="$(cat "$lx_body_file")"
             echo "$platform HTTP $lx_status -> $lx_body"
             if [ "$lx_status" = "200" ] && echo "$lx_body" | jq -e '.data | type == "array" and length >= 1' >/dev/null; then
               echo "✓ LX search works: $platform"
