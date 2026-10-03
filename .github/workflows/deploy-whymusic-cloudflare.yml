@@ -203,3 +203,19 @@ jobs:
             --data-urlencode 'count=1')"
           echo "$search" | jq -e '.data | type == "array" and length >= 1' >/dev/null
           echo "✓ /api/why-search returns at least one result"
+
+          first="$(echo "$search" | jq -c '.data[0]')"
+          test "$first" != "null"
+          song_id="$(echo "$first" | jq -r '.id')"
+          song_title="$(echo "$first" | jq -r '.title')"
+          song_artist="$(echo "$first" | jq -r '.artist')"
+          song_source="$(echo "$first" | jq -r '.subSource // ""')"
+
+          media="$(curl -fsS --max-time 45 --get "$BASE_URL/api/why-url" \
+            --data-urlencode "id=$song_id" \
+            --data-urlencode "title=$song_title" \
+            --data-urlencode "artist=$song_artist" \
+            --data-urlencode "source=$song_source" \
+            --data-urlencode 'br=320')"
+          echo "$media" | jq -e '.url | type == "string" and length > 0' >/dev/null
+          echo "✓ /api/why-url returns a playable URL"
