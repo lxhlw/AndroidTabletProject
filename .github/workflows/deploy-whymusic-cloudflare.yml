@@ -218,6 +218,10 @@ jobs:
           grep -q 'globalThis.lx' "$lx_proxy_file"
           grep -q 'EVENT_NAMES.inited' "$lx_proxy_file"
           echo "✓ Production proxy can fetch and return the real LX source code"
+          echo "Installing Playwright for production LX browser E2E..."
+          npm install --no-save --no-package-lock playwright@latest
+          npx playwright install --with-deps chromium
+          echo "✓ Playwright Chromium ready"
           echo "Running LX compatibility tests..."
           export WHYMUSIC_TYPESCRIPT="$(find whymusic-source/node_modules . -path "*/typescript/lib/typescript.js" -type f -print -quit 2>/dev/null)"
           test -n "$WHYMUSIC_TYPESCRIPT"
