@@ -31,7 +31,7 @@ if (!source.includes('async function searchWhyMusicNetease(')) {
 source = replaceOnce(
   source,
   /async function searchWhyMusic\(keyword, page = 1, count = 20\) \{[\s\S]*?\n\}\n\nasync function getGdUrl\(/,
-  `async function searchWhyMusic(keyword, page = 1, count = 20) {
+  String.raw`async function searchWhyMusic(keyword, page = 1, count = 20) {
   const settled = await Promise.allSettled(
     WHY_SOURCES.map(source => searchWhySubSource(source, keyword, page, count)),
   )
@@ -91,7 +91,7 @@ if (!source.includes('function getNeteaseOuterUrl(')) {
 source = replaceOnce(
   source,
   /async function getWhySubSourceUrl\(songId, source, bitrate = GD_BITRATE\) \{[\s\S]*?\n\}/,
-  `async function getWhySubSourceUrl(songId, source, bitrate = GD_BITRATE) {
+  String.raw`async function getWhySubSourceUrl(songId, source, bitrate = GD_BITRATE) {
   if (source === AUDIOMACK_SOURCE) return await getAudiomackMedia(songId)
   try {
     const url = await getGdUrl(songId, source, bitrate)
@@ -109,7 +109,7 @@ source = replaceOnce(
 source = replaceOnce(
   source,
   /async function getWhyMusicLyric\(lyricId, source\) \{[\s\S]*?\n\}\n\nasync function getWhyMusicPic/,
-  `async function getWhyMusicLyric(lyricId, source) {
+  String.raw`async function getWhyMusicLyric(lyricId, source) {
   if (source === AUDIOMACK_SOURCE) return { lyric: '', tlyric: '' }
   try {
     const data = await gdRequest('lyric', { source, id: lyricId })
@@ -146,7 +146,7 @@ if (!source.includes('async function recommendWhyMusicNetease(')) {
 source = replaceOnce(
   source,
   /async function recommendWhyMusic\(category = DEFAULT_CATEGORY, limit = 40, seed = '0'\) \{[\s\S]*?\n\}\n\nexport \{/,
-  `async function recommendWhyMusic(category = DEFAULT_CATEGORY, limit = 40, seed = '0') {
+  String.raw`async function recommendWhyMusic(category = DEFAULT_CATEGORY, limit = 40, seed = '0') {
   const cat = GD_CATEGORIES[category] || GD_CATEGORIES[DEFAULT_CATEGORY]
   const orders = cat.orders || ['chart']
   const bucket = Math.floor(Date.now() / ROTATE_BUCKET_MS)
