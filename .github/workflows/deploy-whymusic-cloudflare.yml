@@ -45,6 +45,17 @@ jobs:
         working-directory: whymusic-source
         run: pnpm build:cf
 
+      - name: Verify pre-bundled Worker
+        working-directory: whymusic-source
+        run: |
+          test -s packages/web/dist/_worker.js
+          echo "✓ Pre-bundled Worker exists: packages/web/dist/_worker.js"
+          if grep -q 'from "node:stream"\|from '\''node:stream'\''\|require("node:stream")\|require('\''node:stream'\'')' packages/web/dist/_worker.js; then
+            echo "✘ Unexpected external node:stream import remains in _worker.js"
+            exit 1
+          fi
+          echo "✓ No external node:stream import remains"
+
       - name: Ensure Cloudflare Pages project exists
         working-directory: whymusic-source
         env:
@@ -68,4 +79,5 @@ jobs:
           pnpm dlx wrangler@latest pages deploy packages/web/dist \
             --project-name=whymusic-l101 \
             --branch=main \
-            --commit-dirty=true
+            --commit-dirty=true \
+            --no-bundle
