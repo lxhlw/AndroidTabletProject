@@ -39,8 +39,9 @@ if (validationStart < 0 || validationEnd < 0) throw new Error('LX patch: plugin 
 const validationBlock = [
   "  // 代理把上游錯誤也當內容回傳，這裡確認真的是插件碼而不是錯誤頁",
   "  const isCommonJSPlugin = code.includes('module.exports') || code.includes('exports.')",
-  "  const isLXMusicSource = /(?:globalThis|window)\\.lx/.test(code)",
-  "    && /EVENT_NAMES\\.inited/.test(code)",
+  "  const hasLXNamespace = /(?:globalThis|window)(?:\\.lx|\\[\\s*['"]lx['"]\\s*\\])/.test(code)",
+  "  const hasLXInitEvent = /EVENT_NAMES(?:\\.inited|\\[\\s*['"]inited['"]\\s*\\])/.test(code) || /['"]inited['"]/.test(code)",
+  "  const isLXMusicSource = hasLXNamespace && hasLXInitEvent",
   "  if (!isCommonJSPlugin && !isLXMusicSource) {",
   "    throw new Error(t('回應不是插件代碼（可能是上游錯誤頁）'))",
   "  }",
