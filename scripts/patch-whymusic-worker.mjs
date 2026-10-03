@@ -37,7 +37,7 @@ source = replaceOnce(
   )
   const buckets = settled.map((r, i) => {
     if (r.status === 'fulfilled') return r.value
-    console.error(\`[why] search failed on \\${WHY_SOURCES[i]}: \\${r.reason?.message}\`)
+    console.error(\`[why] search failed on \${WHY_SOURCES[i]}: \${r.reason?.message}\`)
     return []
   })
 
@@ -150,7 +150,7 @@ source = replaceOnce(
   const cat = GD_CATEGORIES[category] || GD_CATEGORIES[DEFAULT_CATEGORY]
   const orders = cat.orders || ['chart']
   const bucket = Math.floor(Date.now() / ROTATE_BUCKET_MS)
-  const cacheKey = \`rec:\\${cat.list}:\\${orders.join('+')}:\\${limit}:\\${bucket}:\\${seed}\`
+  const cacheKey = \`rec:\${cat.list}:\${orders.join('+')}:\${limit}:\${bucket}:\${seed}\`
   const cached = gdCacheGet(cacheKey)
   if (cached !== undefined) return cached
 
