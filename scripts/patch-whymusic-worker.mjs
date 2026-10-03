@@ -145,7 +145,7 @@ if (!source.includes('async function recommendWhyMusicNetease(')) {
 
 source = replaceOnce(
   source,
-  /async function recommendWhyMusic\(category = DEFAULT_CATEGORY, limit = 40, seed = '0'\) \{[\s\S]*?\n\}\n\nexport \{/,
+  /async function recommendWhyMusic\b[\s\S]*?\n\s*export \{/,
   String.raw`async function recommendWhyMusic(category = DEFAULT_CATEGORY, limit = 40, seed = '0') {
   const cat = GD_CATEGORIES[category] || GD_CATEGORIES[DEFAULT_CATEGORY]
   const orders = cat.orders || ['chart']
