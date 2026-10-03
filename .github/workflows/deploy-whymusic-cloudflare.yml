@@ -209,6 +209,15 @@ jobs:
           printf '%s' "$sample_code" | grep -q "'kw'"
           printf '%s' "$sample_code" | grep -q "'mg'"
           echo "✓ Real LX multi-platform source sample declares wy/tx/kg/kw/mg"
+          echo "Testing production proxy for real LX source..."
+          lx_proxy_file="/tmp/lx-source-proxy.js"
+          lx_proxy_status="$(curl -sS --max-time 30 -o "$lx_proxy_file" -w '%{http_code}' --get "$BASE_URL/api/proxy" \
+            --data-urlencode "url=https://raw.githubusercontent.com/cdyUuu/lx-music-xinghai-source/main/xinghai-music-source.js" \
+            --data-urlencode "method=GET")"
+          test "$lx_proxy_status" = "200"
+          grep -q 'globalThis.lx' "$lx_proxy_file"
+          grep -q 'EVENT_NAMES.inited' "$lx_proxy_file"
+          echo "✓ Production proxy can fetch and return the real LX source code"
           echo "Running real LX source compatibility smoke test..."
           export WHYMUSIC_TYPESCRIPT="$(find whymusic-source/node_modules . -path "*/typescript/lib/typescript.js" -type f -print -quit 2>/dev/null)"
           test -n "$WHYMUSIC_TYPESCRIPT"
