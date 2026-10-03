@@ -252,3 +252,10 @@ jobs:
             --data-urlencode 'br=320')"
           echo "$media" | jq -e '.url | type == "string" and length > 0' >/dev/null
           echo "✓ /api/why-url returns a playable URL"
+          media_url="$(echo "$media" | jq -r '.url')"
+          rm -f /tmp/whymusic-audio.bin
+          curl -fsSL -L --max-time 45 -r 0-4095 "$media_url" -o /tmp/whymusic-audio.bin
+          test -s /tmp/whymusic-audio.bin
+          size="$(wc -c < /tmp/whymusic-audio.bin)"
+          test "$size" -ge 100
+          echo "✓ Resolved media URL returned audio bytes (${size} bytes sample)"
