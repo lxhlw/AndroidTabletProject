@@ -174,16 +174,27 @@ jobs:
           echo "✓ /api/recommend returns a data array"
 
           echo "LX platform smoke tests..."
+          lx_failures=0
           for platform in netease qq kugou kuwo; do
-            lx_search="$(curl -fsS --max-time 30 --get "$BASE_URL/api/lx-search" \
+            lx_response="$(curl -sS --max-time 30 --get -w '
+HTTP_STATUS:%{http_code}' "$BASE_URL/api/lx-search" \
               --data-urlencode "source=$platform" \
               --data-urlencode 'q=周杰伦' \
               --data-urlencode 'page=1' \
               --data-urlencode 'count=3')"
-            echo "$platform -> $lx_search"
-            echo "$lx_search" | jq -e '.data | type == "array" and length >= 1' >/dev/null
-            echo "✓ LX search works: $platform"
+            lx_status="$(printf '%s
+' "$lx_response" | sed -n 's/^HTTP_STATUS://p')"
+            lx_body="$(printf '%s
+' "$lx_response" | sed '/^HTTP_STATUS:/d')"
+            echo "$platform HTTP $lx_status -> $lx_body"
+            if [ "$lx_status" = "200" ] && echo "$lx_body" | jq -e '.data | type == "array" and length >= 1' >/dev/null; then
+              echo "✓ LX search works: $platform"
+            else
+              echo "✘ LX search failed: $platform"
+              lx_failures=$((lx_failures + 1))
+            fi
           done
+          test "$lx_failures" -eq 0
 
           # 公开 LX 多平台音源样本：验证安装器识别的是 LX 协议源码，而不是只允许
           # module.exports 的 WhyMusic 原生插件。
