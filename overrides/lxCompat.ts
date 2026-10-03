@@ -359,9 +359,219 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
       },
     },
   }
+
+  const aesSBox = (() => {
+    const s = new Uint8Array(256)
+    const mul = (a: number, b: number) => {
+      let x = a, y = b, r = 0
+      for (let i = 0; i < 8; i++) {
+        if (y & 1) r ^= x
+        x = (x << 1) ^ ((x & 0x80) ? 0x11b : 0)
+        y >>>= 1
+      }
+      return r & 0xff
+    }
+    const pow = (a: number, n: number) => {
+      let r = 1, x = a
+      while (n) {
+        if (n & 1) r = mul(r, x)
+        x = mul(x, x)
+        n >>>= 1
+      }
+      return r
+    }
+    for (let i = 0; i < 256; i++) {
+      const x = i === 0 ? 0 : pow(i, 254)
+      s[i] = (x ^ ((x << 1) | (x >>> 7)) ^ ((x << 2) | (x >>> 6)) ^ ((x << 3) | (x >>> 5)) ^ ((x << 4) | (x >>> 4)) ^ 0x63) & 0xff
+    }
+    return s
+  })()
+
+  const aesExpandKey = (key: Uint8Array) => {
+    const nk = key.length / 4
+    const nr = nk + 6
+    const words = new Uint32Array(4 * (nr + 1))
+    for (let i = 0; i < nk; i++) {
+      words[i] = ((key[i * 4] << 24) | (key[i * 4 + 1] << 16) | (key[i * 4 + 2] << 8) | key[i * 4 + 3]) >>> 0
+    }
+    let rcon = 1
+    const subWord = (w: number) => {
+      return ((aesSBox[(w >>> 24) & 255] << 24)
+        | (aesSBox[(w >>> 16) & 255] << 16)
+        | (aesSBox[(w >>> 8) & 255] << 8)
+        | aesSBox[w & 255]) >>> 0
+    }
+    const rotWord = (w: number) => ((w << 8) | (w >>> 24)) >>> 0
+    for (let i = nk; i < words.length; i++) {
+      let temp = words[i - 1]
+      if (i % nk === 0) {
+        temp = (subWord(rotWord(temp)) ^ (rcon << 24)) >>> 0
+        rcon = ((rcon << 1) ^ ((rcon & 0x80) ? 0x11b : 0)) & 0xff
+      } else if (nk > 6 && i % nk === 4) {
+        temp = subWord(temp)
+      }
+      words[i] = (words[i - nk] ^ temp) >>> 0
+    }
+    return { words, rounds: nr }
+  }
+
+  const aesEncryptBlock = (input: Uint8Array, key: Uint8Array) => {
+    const { words, rounds } = aesExpandKey(key)
+    const state = new Uint8Array(input)
+    const addRoundKey = (round: number) => {
+      const base = round * 4
+      for (let c = 0; c < 4; c++) {
+        const w = words[base + c]
+        state[c * 4] ^= w >>> 24
+        state[c * 4 + 1] ^= w >>> 16
+        state[c * 4 + 2] ^= w >>> 8
+        state[c * 4 + 3] ^= w
+      }
+    }
+    const xtime = (x: number) => ((x << 1) ^ ((x & 0x80) ? 0x11b : 0)) & 0xff
+    const mixColumns = () => {
+      for (let c = 0; c < 4; c++) {
+        const i = c * 4
+        const a = state[i], b = state[i + 1], d = state[i + 2], e = state[i + 3]
+        const x = a ^ b ^ d ^ e
+        state[i] = a ^ x ^ xtime(a ^ b)
+        state[i + 1] = b ^ x ^ xtime(b ^ d)
+        state[i + 2] = d ^ x ^ xtime(d ^ e)
+        state[i + 3] = e ^ x ^ xtime(e ^ a)
+      }
+    }
+    const shiftRows = () => {
+      const t = new Uint8Array(state)
+      state[0] = t[0]; state[4] = t[4]; state[8] = t[8]; state[12] = t[12]
+      state[1] = t[5]; state[5] = t[9]; state[9] = t[13]; state[13] = t[1]
+      state[2] = t[10]; state[6] = t[14]; state[10] = t[2]; state[14] = t[6]
+      state[3] = t[15]; state[7] = t[3]; state[11] = t[7]; state[15] = t[11]
+    }
+    addRoundKey(0)
+    for (let round = 1; round <= rounds; round++) {
+      for (let i = 0; i < 16; i++) state[i] = aesSBox[state[i]]
+      shiftRows()
+      if (round !== rounds) mixColumns()
+      addRoundKey(round)
+    }
+    return state
+  }
+
+  const aesEncrypt = (input: any, mode = 'aes-128-ecb', key: any, iv?: any) => {
+    const data = input instanceof Uint8Array ? new Uint8Array(input) : new Uint8Array(input || [])
+    const keyBytes = key instanceof Uint8Array ? key : new Uint8Array(key || [])
+    if (![16, 24, 32].includes(keyBytes.length)) throw new Error('LX AES key must be 128/192/256 bit')
+    const name = String(mode || '').toLowerCase()
+    if (!/^aes-(128|192|256)-(ecb|cbc)$/.test(name)) throw new Error('LX AES mode unsupported: ' + mode)
+    const padded = new Uint8Array(data.length + (16 - (data.length % 16 || 16)))
+    padded.set(data)
+    padded.fill(16 - (data.length % 16 || 16), data.length)
+    const out = new Uint8Array(padded.length)
+    let prev = name.endsWith('-cbc') ? (iv instanceof Uint8Array ? new Uint8Array(iv) : new Uint8Array(iv || [])) : new Uint8Array(16)
+    if (name.endsWith('-cbc') && prev.length !== 16) throw new Error('LX AES IV must be 16 bytes')
+    for (let off = 0; off < padded.length; off += 16) {
+      const block = padded.slice(off, off + 16)
+      if (name.endsWith('-cbc')) for (let i = 0; i < 16; i++) block[i] ^= prev[i]
+      const enc = aesEncryptBlock(block, keyBytes)
+      out.set(enc, off)
+      if (name.endsWith('-cbc')) prev = enc
+    }
+    return out
+  }
+
+  const derBytes = (pemOrDer: any) => {
+    if (pemOrDer instanceof Uint8Array) return new Uint8Array(pemOrDer)
+    const text = String(pemOrDer || '')
+    if (/-----BEGIN/.test(text)) {
+      const body = text.replace(/-----BEGIN [^-]+-----/g, '').replace(/-----END [^-]+-----/g, '').replace(/\s+/g, '')
+      const binary = atob(body)
+      return new Uint8Array(Array.from(binary, ch => ch.charCodeAt(0)))
+    }
+    return new Uint8Array(pemOrDer || [])
+  }
+
+  const derReadLen = (bytes: Uint8Array, pos: number) => {
+    const first = bytes[pos++]
+    if (first < 0x80) return { len: first, pos }
+    const count = first & 0x7f
+    let len = 0
+    for (let i = 0; i < count; i++) len = (len << 8) | bytes[pos++]
+    return { len, pos }
+  }
+
+  const derRead = (bytes: Uint8Array, pos: number) => {
+    const tag = bytes[pos++]
+    const info = derReadLen(bytes, pos)
+    const start = info.pos
+    return { tag, start, end: start + info.len, next: start + info.len }
+  }
+
+  const bytesToBigInt = (bytes: Uint8Array) => {
+    let value = 0n
+    for (const b of bytes) value = (value << 8n) | BigInt(b)
+    return value
+  }
+
+  const bigIntToBytes = (value: bigint, size: number) => {
+    const out = new Uint8Array(size)
+    let v = value
+    for (let i = size - 1; i >= 0; i--) {
+      out[i] = Number(v & 0xffn)
+      v >>= 8n
+    }
+    return out
+  }
+
+  const rsaPublicParts = (key: any) => {
+    const bytes = derBytes(key)
+    const outer = derRead(bytes, 0)
+    let p = outer.start
+    if (bytes[p] === 0x30) {
+      const alg = derRead(bytes, p)
+      p = alg.next
+      const bit = derRead(bytes, p)
+      if (bit.tag === 0x03) {
+        p = bit.start + 1
+        const inner = derRead(bytes, p)
+        p = inner.start
+      }
+    } else {
+      p = outer.start
+    }
+    const nObj = derRead(bytes, p)
+    const n = bytesToBigInt(bytes.slice(nObj.start, nObj.end).at(0) === 0 ? bytes.slice(nObj.start + 1, nObj.end) : bytes.slice(nObj.start, nObj.end))
+    p = nObj.next
+    const eObj = derRead(bytes, p)
+    const e = bytesToBigInt(bytes.slice(eObj.start, eObj.end))
+    return { n, e, size: Math.ceil(n.toString(2).length / 8) }
+  }
+
+  const rsaEncrypt = (input: any, key: any) => {
+    const data = input instanceof Uint8Array ? new Uint8Array(input) : new Uint8Array(input || [])
+    const { n, e, size } = rsaPublicParts(key)
+    if (data.length > size) throw new Error('LX RSA plaintext is larger than key size')
+    const padded = new Uint8Array(size)
+    padded.set(data, size - data.length)
+    const c = (() => {
+      const m = bytesToBigInt(padded)
+      let base = m % n
+      let exponent = e
+      let result = 1n
+      while (exponent > 0n) {
+        if (exponent & 1n) result = (result * base) % n
+        base = (base * base) % n
+        exponent >>= 1n
+      }
+      return bigIntToBytes(result, size)
+    })()
+    return c
+  }
+
   fakeLX.utils = {
     ...lxUtils,
     crypto: {
+      aesEncrypt,
+      rsaEncrypt,
       md5: lxMd5,
       randomBytes(size: number) {
         const n = Math.max(0, Number(size) || 0)
