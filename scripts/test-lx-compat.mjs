@@ -2,7 +2,9 @@ import { readFileSync, writeFileSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-const tsModule = await import('../whymusic-source/node_modules/typescript/lib/typescript.js')
+const tsPath = process.env.WHYMUSIC_TYPESCRIPT
+if (!tsPath) throw new Error('WHYMUSIC_TYPESCRIPT is not set')
+const tsModule = await import(pathToFileURL(tsPath).href)
 const tsCompiler = tsModule.default || tsModule
 
 const sourceUrl = 'https://raw.githubusercontent.com/cdyUuu/lx-music-xinghai-source/main/xinghai-music-source.js'
