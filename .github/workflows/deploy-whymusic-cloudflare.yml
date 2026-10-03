@@ -210,4 +210,7 @@ jobs:
           printf '%s' "$sample_code" | grep -q "'mg'"
           echo "✓ Real LX multi-platform source sample declares wy/tx/kg/kw/mg"
           echo "Running real LX source compatibility smoke test..."
+          export WHYMUSIC_TYPESCRIPT="$(find whymusic-source/node_modules . -path "*/typescript/lib/typescript.js" -type f -print -quit 2>/dev/null)"
+          test -n "$WHYMUSIC_TYPESCRIPT"
+          echo "Using TypeScript compiler: $WHYMUSIC_TYPESCRIPT"
           node scripts/test-lx-compat.mjs
