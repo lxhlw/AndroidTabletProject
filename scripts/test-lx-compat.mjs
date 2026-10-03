@@ -14,6 +14,8 @@ const sourceUrls = [
 const sourceCodes = await Promise.all(sourceUrls.map(async (sourceUrl) => (await fetch(sourceUrl)).text()))
 const sourceCode = sourceCodes[0]
 const gdstudioCode = sourceCodes[1]
+const sixyinUrl = 'https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/latest.js'
+const sixyinCode = await (await fetch(sixyinUrl)).text()
 
 for (const [label, code] of [['xinghai', sourceCode], ['gdstudio', gdstudioCode]]) {
   if (!/(?:globalThis|window)\.lx/.test(code)) throw new Error('LX sample missing globalThis.lx: ' + label)
@@ -55,6 +57,9 @@ for (const [label, code, expected] of detectorCases) {
   if (actual !== expected) throw new Error('LX detector regression: ' + label + ' -> ' + actual)
   console.log('✓ LX detector: ' + label)
 }
+
+if (!isLXMusicSourceCode(sixyinCode)) throw new Error('LX detector rejected actual SixYin bundled source')
+console.log('✓ LX detector: actual SixYin bundled source')
 
 unlinkSync(tempPath)
 
