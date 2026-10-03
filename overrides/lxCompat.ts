@@ -489,7 +489,7 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
   const aesEncrypt = (input: any, mode = 'aes-128-ecb', key: any, iv?: any) => {
     const data = lxBytes(input)
     const keyBytes = lxBytes(key)
-    if (![16, 24, 32].includes(keyBytes.length)) throw new Error('LX AES key must be 128/192/256 bit')
+    if (![16, 24, 32].includes(keyBytes.length)) throw new Error('LX AES key must be 128/192/256 bit (mode=' + String(mode) + ', keyBytes=' + keyBytes.length + ', keyType=' + typeof key + ', keyCtor=' + (key?.constructor?.name || 'none') + ')')
     const name = String(mode || '').toLowerCase()
     if (!/^aes-(128|192|256)-(ecb|cbc)$/.test(name)) throw new Error('LX AES mode unsupported: ' + mode)
     const padded = new Uint8Array(data.length + (16 - (data.length % 16 || 16)))
