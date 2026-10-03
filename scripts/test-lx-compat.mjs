@@ -118,15 +118,15 @@ try {
 let sixyinMedia
 try {
   sixyinMedia = await sixyinPlugin.getMediaSource({
-  id: 'sixyin-smoke-1',
+  id: '186016',
   title: 'SixYin Smoke Test',
   artist: 'Test Artist',
   subSource: 'wy',
   lxInfo: {
     id: 'sixyin-smoke-1',
-    songmid: 'sixyin-smoke-1',
-    name: 'SixYin Smoke Test',
-    singer: 'Test Artist',
+    songmid: '186016',
+    name: '晴天',
+    singer: '周杰伦',
   },
   lxAlternatives: [],
 }, '128')
