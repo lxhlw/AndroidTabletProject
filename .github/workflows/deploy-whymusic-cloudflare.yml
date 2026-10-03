@@ -41,6 +41,10 @@ jobs:
         working-directory: whymusic-source
         run: node ../scripts/patch-whymusic-worker.mjs
 
+      - name: Patch LX Music compatibility layer
+        working-directory: whymusic-source
+        run: node ../scripts/patch-lx-compat.mjs
+
       - name: Install WhyMusic dependencies
         working-directory: whymusic-source
         run: pnpm install --frozen-lockfile
