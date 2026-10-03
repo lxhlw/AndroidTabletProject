@@ -2,8 +2,8 @@ import { chromium } from 'playwright'
 
 const baseUrl = process.env.BASE_URL || 'https://whymusic-l101.pages.dev'
 const sourceUrl = 'https://raw.githubusercontent.com/pdone/lx-music-source/main/sixyin/latest.js'
-const isLXCode = (code) => /(?:globalThis|window)(?:\\.lx|\\[\\s*['\"]lx['\"]\\s*\\])/.test(code)
-  && /EVENT_NAMES(?:\\.inited|\\[\\s*['\"]inited['\"]\\s*\\])/.test(code)
+const isLXCode = (code) => /(?:globalThis|window)(?:\\.lx|\\[\\s*['"]lx['"]\\s*\\])/.test(code)
+  && /EVENT_NAMES(?:\\.inited|\\[\\s*['"]inited['"]\\s*\\])/.test(code)
   && !code.includes('module.exports =')
 
 const browser = await chromium.launch({
@@ -18,8 +18,12 @@ try {
   })
 
   await context.addInitScript(() => {
-    localStorage.clear()
-    localStorage.setItem('whymusic-lang', 'zh-Hant')
+    if (sessionStorage.getItem('__lx_e2e_initialized') !== '1') {
+      localStorage.clear()
+      localStorage.setItem('__lx_e2e_initialized', '1')
+      localStorage.setItem('whymusic-lang', 'zh-Hant')
+      sessionStorage.setItem('__lx_e2e_initialized', '1')
+    }
   })
 
   const page = await context.newPage()
