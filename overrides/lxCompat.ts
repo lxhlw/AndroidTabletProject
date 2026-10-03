@@ -150,9 +150,20 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
   }
 
   const fakeLX: any = {
-    version: '1.14.0',
+    // LX 自定义音源运行时的兼容字段。
+    // 部分混淆音源会读取 currentScriptInfo 来做宿主/脚本版本校验，
+    // 因此不能只提供 EVENT_NAMES/request/on/send。
+    version: '2.0.0',
     EVENT_NAMES,
-    env: { platform: 'web', version: 'WhyMusic LX compatibility' },
+    env: 'desktop',
+    currentScriptInfo: {
+      name: meta.name,
+      description: meta.description || '',
+      version: meta.version || '1.0.0',
+      author: meta.author || '',
+      homepage: 'https://www.sixyin.com',
+      rawScript: code,
+    },
 
     request(targetUrl: string, options: any = {}, callback: any) {
       Promise.resolve().then(async () => {
