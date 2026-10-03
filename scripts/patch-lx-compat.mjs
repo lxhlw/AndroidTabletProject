@@ -33,17 +33,19 @@ writeFileSync(runnerPath, runner)
 
 // Allow LX source code through the URL installer validation.
 let musicApp = readFileSync(musicAppPath, 'utf8')
-musicApp = replaceOnce(
-  musicApp,
-  /if \(!code\.includes\('module\.exports'\) && !code\.includes\('exports\\.'\)\) \{[\s\S]*?\n  \}/,
-  "const isCommonJSPlugin = code.includes('module.exports') || code.includes('exports.')\n"
-  + "  const isLXMusicSource = /(?:globalThis|window)\\.lx/.test(code)\n"
-  + "    && /EVENT_NAMES\\.inited/.test(code)\n"
-  + "  if (!isCommonJSPlugin && !isLXMusicSource) {\n"
-  + "    throw new Error(t('回應不是插件代碼（可能是上游錯誤頁）'))\n"
-  + "  }",
-  'plugin source validation',
-)
+const validationStart = musicApp.indexOf("  // 代理把上游錯誤也當內容回傳");
+const validationEnd = musicApp.indexOf("  return code", validationStart);
+if (validationStart < 0 || validationEnd < 0) throw new Error('LX patch: plugin validation markers not found');
+const validationBlock = [
+  "  // 代理把上游錯誤也當內容回傳，這裡確認真的是插件碼而不是錯誤頁",
+  "  const isCommonJSPlugin = code.includes('module.exports') || code.includes('exports.')",
+  "  const isLXMusicSource = /(?:globalThis|window)\\.lx/.test(code)",
+  "    && /EVENT_NAMES\\.inited/.test(code)",
+  "  if (!isCommonJSPlugin && !isLXMusicSource) {",
+  "    throw new Error(t('回應不是插件代碼（可能是上游錯誤頁）'))",
+  "  }",
+].join('\\n') + "\n";
+musicApp = musicApp.slice(0, validationStart) + validationBlock + musicApp.slice(validationEnd);
 writeFileSync(musicAppPath, musicApp)
 
 // Worker helper: search one GD platform on behalf of LX-compatible plugins.
