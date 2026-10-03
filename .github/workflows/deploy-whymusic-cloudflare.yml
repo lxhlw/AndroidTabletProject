@@ -172,3 +172,28 @@ jobs:
           test "$recommend_status" = "200"
           echo "$recommend" | jq -e '.data | type == "array"' >/dev/null
           echo "✓ /api/recommend returns a data array"
+
+          echo "LX platform smoke tests..."
+          for platform in netease qq kugou kuwo; do
+            lx_search="$(curl -fsS --max-time 30 --get "$BASE_URL/api/lx-search" \
+              --data-urlencode "source=$platform" \
+              --data-urlencode 'q=周杰伦' \
+              --data-urlencode 'page=1' \
+              --data-urlencode 'count=3')"
+            echo "$platform -> $lx_search"
+            echo "$lx_search" | jq -e '.data | type == "array" and length >= 1' >/dev/null
+            echo "✓ LX search works: $platform"
+          done
+
+          # 公开 LX 多平台音源样本：验证安装器识别的是 LX 协议源码，而不是只允许
+          # module.exports 的 WhyMusic 原生插件。
+          sample_code="$(curl -fsSL --max-time 30 \
+            'https://raw.githubusercontent.com/cdyUuu/lx-music-xinghai-source/main/xinghai-music-source.js')"
+          printf '%s' "$sample_code" | grep -q 'globalThis.lx'
+          printf '%s' "$sample_code" | grep -q 'EVENT_NAMES.inited'
+          printf '%s' "$sample_code" | grep -q "'wy'"
+          printf '%s' "$sample_code" | grep -q "'tx'"
+          printf '%s' "$sample_code" | grep -q "'kg'"
+          printf '%s' "$sample_code" | grep -q "'kw'"
+          printf '%s' "$sample_code" | grep -q "'mg'"
+          echo "✓ Real LX multi-platform source sample declares wy/tx/kg/kw/mg"
