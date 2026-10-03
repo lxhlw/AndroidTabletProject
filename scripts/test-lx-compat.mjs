@@ -2,8 +2,6 @@ import { readFileSync, writeFileSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import ts from 'node:module'
-
 const tsModule = await import('typescript')
 const tsCompiler = tsModule.default || tsModule
 
@@ -13,7 +11,7 @@ const sourceCode = await (await fetch(sourceUrl)).text()
 if (!sourceCode.includes('globalThis.lx')) throw new Error('LX sample missing globalThis.lx')
 if (!sourceCode.includes('EVENT_NAMES.inited')) throw new Error('LX sample missing EVENT_NAMES.inited')
 for (const key of ['wy', 'tx', 'kg', 'kw', 'mg']) {
-  if (!new RegExp('\\\\b' + key + '\\\\b').test(sourceCode)) {
+  if (!sourceCode.includes(key)) {
     throw new Error('LX sample missing platform ' + key)
   }
 }
@@ -24,9 +22,9 @@ tsSource = tsSource.replace("import { Plugin } from '../types'\\n", '')
 
 const transpiled = tsCompiler.transpileModule(tsSource, {
   compilerOptions: {
-    target: ts.ScriptTarget.ES2022,
-    module: ts.ModuleKind.ESNext,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    target: tsCompiler.ScriptTarget.ES2022,
+    module: tsCompiler.ModuleKind.ESNext,
+    moduleResolution: tsCompiler.ModuleResolutionKind.Bundler,
     removeComments: false,
   },
 }).outputText
