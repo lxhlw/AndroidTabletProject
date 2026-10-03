@@ -111,7 +111,9 @@ const validationBlock = `  // 代理把上游錯誤也當內容回傳，這裡�
   const hasLXAction =
     code.includes('musicUrl')
     || code.includes('getMediaSource')
-  const isLXMusicSource = hasLXNamespace && hasLXApiBinding && hasLXAction
+    || hasLXInitEvent
+    || hasLXApiBinding
+  const isLXMusicSource = hasLXNamespace && hasLXEventProtocol && hasLXAction
   if (!isCommonJSPlugin && !isLXMusicSource) {
     throw new Error(t('回應不是插件代碼（可能是上游錯誤頁）'))
   }
