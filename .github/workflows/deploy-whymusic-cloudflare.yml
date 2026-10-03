@@ -1,6 +1,9 @@
 name: Deploy WhyMusic to Cloudflare Pages
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -48,7 +51,13 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          pnpm wrangler pages project create whymusic-l101 --production-branch main || true
+          PROJECTS="$(pnpm dlx wrangler@latest pages project list --json)"
+          if echo "$PROJECTS" | jq -e '.[]? | select(.name == "whymusic-l101")' >/dev/null; then
+            echo "Cloudflare Pages project whymusic-l101 already exists."
+          else
+            echo "Creating Cloudflare Pages project whymusic-l101..."
+            pnpm dlx wrangler@latest pages project create whymusic-l101 --production-branch main
+          fi
 
       - name: Deploy WhyMusic
         working-directory: whymusic-source
@@ -56,4 +65,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          pnpm wrangler pages deploy packages/web/dist             --project-name=whymusic-l101             --branch=main             --commit-dirty=true
+          pnpm dlx wrangler@latest pages deploy packages/web/dist \
+            --project-name=whymusic-l101 \
+            --branch=main \
+            --commit-dirty=true
