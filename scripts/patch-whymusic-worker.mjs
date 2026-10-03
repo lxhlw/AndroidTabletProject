@@ -37,7 +37,7 @@ source = replaceOnce(
   )
   const buckets = settled.map((r, i) => {
     if (r.status === 'fulfilled') return r.value
-    console.error(\`[why] search failed on \${WHY_SOURCES[i]}: \${r.reason?.message}\`)
+    console.error(\`[why] search failed on \\${WHY_SOURCES[i]}: \\${r.reason?.message}\`)
     return []
   })
 
@@ -49,7 +49,7 @@ source = replaceOnce(
       console.error('[why] netease fallback search failed:', err?.message)
     }
     throw new Error(
-      \`所有子音源都失败：\${settled.map((r, i) => \`${WHY_SOURCES[i]}（${r.reason?.message}）\`).join('；')}\`,
+      \`所有子音源都失败：\${settled.map((r, i) => \`\${WHY_SOURCES[i]}（\${r.reason?.message}）\`).join('；')}\`,
     )
   }
 
@@ -60,7 +60,7 @@ source = replaceOnce(
     for (const bucket of buckets) {
       const item = bucket[idx]
       if (!item || !item.id || !item.title) continue
-      const key = \`${gdNormalizeName(item.title)}::${gdNormalizeName(item.artist)}\`
+      const key = \`\${gdNormalizeName(item.title)}::\${gdNormalizeName(item.artist)}\`
       if (seen.has(key)) continue
       seen.add(key)
       merged.push(item)
@@ -150,7 +150,7 @@ source = replaceOnce(
   const cat = GD_CATEGORIES[category] || GD_CATEGORIES[DEFAULT_CATEGORY]
   const orders = cat.orders || ['chart']
   const bucket = Math.floor(Date.now() / ROTATE_BUCKET_MS)
-  const cacheKey = \`rec:\${cat.list}:\${orders.join('+')}:\${limit}:\${bucket}:\${seed}\`
+  const cacheKey = \`rec:\\${cat.list}:\\${orders.join('+')}:\\${limit}:\\${bucket}:\\${seed}\`
   const cached = gdCacheGet(cacheKey)
   if (cached !== undefined) return cached
 
@@ -175,13 +175,13 @@ source = replaceOnce(
     for (const b of buckets) {
       const item = b[idx]
       if (!item) continue
-      const key = \`${gdNormalizeName(item.title)}::${gdNormalizeName(item.artist)}\`
+      const key = \`\${gdNormalizeName(item.title)}::\${gdNormalizeName(item.artist)}\`
       if (seen.has(key)) continue
       seen.add(key)
       merged.push(item)
     }
   }
-  const out = dailyShuffle(merged, limit, \`${cat.list}:${seed}\`)
+  const out = dailyShuffle(merged, limit, \`\${cat.list}:\${seed}\`)
   gdCacheSet(cacheKey, out, GD_TTL.playlist)
   return out
 }
