@@ -37,7 +37,7 @@ export function isLXMusicSourceCode(code: string): boolean {
   // Some real LX sources are bundled/minified and rewrite EVENT_NAMES.inited
   // into computed property names, so the literal init event is not preserved.
   const hasLXApiBinding =
-    /\b(?:const|let|var)\s*\{[^}]*\bEVENT_NAMES\s*[:=][^}]*\b(?:on|send|request)\s*[:=][^}]*\}\s*=\s*(?:globalThis|window)(?:\\.lx|\\[['"]lx['"]\\])/s.test(code)
+    /(?:const|let|var)\s*\{[^}]*\bEVENT_NAMES\b[^}]*\b(?:on|send|request)\b[^}]*\}\s*=\s*(?:globalThis|window)(?:\.lx|\[['"]lx['"]\])/s.test(code)
 
   const hasLXAction =
     code.includes('musicUrl')
