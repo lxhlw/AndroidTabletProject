@@ -101,6 +101,14 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
   const meta = lxMeta(code)
   const requestHandlers: any[] = []
   let initPayload: any = null
+  let initResolve: ((value: any) => void) | null = null
+  let initReject: ((reason?: any) => void) | null = null
+  let initTimer: ReturnType<typeof setTimeout> | null = null
+  const initReady = new Promise<any>((resolve, reject) => {
+    initResolve = resolve
+    initReject = reject
+    initTimer = setTimeout(() => reject(new Error('LX 音源初始化超时')), 15000)
+  })
   const events: Record<string, any[]> = {}
   const EVENT_NAMES = {
     inited: 'inited',
@@ -118,7 +126,18 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
         const method = String(options?.method || 'GET').toUpperCase()
         const headers = { ...(options?.headers || {}) }
         let body = options?.body
-        if (body && typeof body !== 'string' && typeof body === 'object') {
+        let requestHeaders = { ...(options?.headers || {}) }
+        if (options?.form && typeof options.form === 'object') {
+          body = Object.entries(options.form).map(([key, value]) =>
+            encodeURIComponent(key) + '=' + encodeURIComponent(String(value)),
+          ).join('&')
+          requestHeaders['Content-Type'] = requestHeaders['Content-Type'] || 'application/x-www-form-urlencoded'
+        } else if (options?.formData && typeof options.formData === 'object') {
+          body = Object.entries(options.formData).map(([key, value]) =>
+            encodeURIComponent(key) + '=' + encodeURIComponent(String(value)),
+          ).join('&')
+          requestHeaders['Content-Type'] = requestHeaders['Content-Type'] || 'application/x-www-form-urlencoded'
+        } else if (body && typeof body !== 'string' && typeof body === 'object') {
           body = JSON.stringify(body)
         }
 
@@ -130,7 +149,7 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
 
         const response = await deps.pluginFetch(requestUrl, {
           method,
-          headers,
+          headers: requestHeaders,
           body: method === 'GET' || method === 'HEAD' ? undefined : body,
         })
 
@@ -162,7 +181,15 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
     },
 
     send(event: string, payload: any) {
-      if (event === EVENT_NAMES.inited) initPayload = payload
+      if (event === EVENT_NAMES.inited) {
+        initPayload = payload
+        if (initTimer) {
+          clearTimeout(initTimer)
+          initTimer = null
+        }
+        if (initPayload?.status && initPayload?.sources) initResolve?.(initPayload)
+        else initReject?.(new Error('LX 音源初始化失败'))
+      }
       for (const handler of events[event] || []) {
         try { handler(payload) } catch (err) { deps.console.warn('[LX] event error', err) }
       }
@@ -186,17 +213,52 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
     console: deps.console,
   }
 
+  const lxUtils = {
+    buffer: {
+      from(value: any, encoding = 'utf-8') {
+        const text = String(value ?? '')
+        if (encoding === 'base64') {
+          const binary = atob(text)
+          return new Uint8Array(Array.from(binary, ch => ch.charCodeAt(0)))
+        }
+        return new TextEncoder().encode(text)
+      },
+      bufToString(buffer: any, encoding = 'utf-8') {
+        const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer || [])
+        if (encoding === 'base64') {
+          let binary = ''
+          for (const b of bytes) binary += String.fromCharCode(b)
+          return btoa(binary)
+        }
+        return new TextDecoder('utf-8').decode(bytes)
+      },
+    },
+  }
+  fakeLX.utils = lxUtils
+
   // globalThis/window 都是假的，避免 LX 源直接碰到真正的页面 window。
   const argNames = ['globalThis', 'window', ...Object.keys(sandbox)]
   const argValues = [{ lx: fakeLX }, { lx: fakeLX }, ...Object.values(sandbox)]
   const pluginFunc = new Function(...argNames, code)
   pluginFunc(...argValues)
 
-  if (!initPayload?.status || !initPayload?.sources) {
-    throw new Error('LX 音源没有发送有效的 EVENT_NAMES.inited')
+  const getInit = async () => {
+    if (initPayload?.status && initPayload?.sources) return initPayload
+    return await initReady
   }
 
-  const sources = Object.entries(initPayload.sources).filter(([key, info]: any) => {
+  const getSources = async () => {
+    const payload = await getInit()
+    return Object.entries(payload.sources).filter(([key, info]: any) => {
+      return /^(wy|tx|kg|kw|mg)$/.test(key) && info?.type === 'music'
+    }) as [string, any][]
+  }
+
+  const sources = initPayload?.status && initPayload?.sources
+    ? Object.entries(initPayload.sources).filter(([key, info]: any) => {
+        return /^(wy|tx|kg|kw|mg)$/.test(key) && info?.type === 'music'
+      }) as [string, any][]
+    : []
     return /^(wy|tx|kg|kw|mg)$/.test(key) && info?.type === 'music'
   }) as [string, any][]
 
@@ -227,8 +289,9 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
     async search(query: string, page = 1, type = 'music') {
       if (type !== 'music') return { data: [], isEnd: true }
 
+      const activeSources = await getSources()
       const buckets = await Promise.all(
-        sources.map(async ([source]) => {
+        activeSources.map(async ([source]) => {
           const apiSource = LX_TO_GD[source] || source
           const url = LX_COMPAT_API + '/api/lx-search?source=' + encodeURIComponent(apiSource)
             + '&q=' + encodeURIComponent(query)
@@ -280,7 +343,8 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
 
       let last: any = null
       for (const candidate of candidates) {
-        const sourceInfo = initPayload.sources[candidate.source]
+        const payload = await getInit()
+        const sourceInfo = payload.sources[candidate.source]
         if (!sourceInfo) continue
 
         const available = Array.isArray(sourceInfo.qualitys) ? sourceInfo.qualitys : []
