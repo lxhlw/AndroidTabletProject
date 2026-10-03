@@ -122,7 +122,7 @@ const fallbackPluginFetch = async (input, init = {}) => {
   const url = String(input)
   if (url.startsWith('https://whymusic-l101.pages.dev/api/proxy?')) {
     const target = decodeURIComponent(new URL(url).searchParams.get('url') || '')
-    if (target.includes('interface3.music.163.com')) {
+    if (target.includes('interface3.music.163.com') || target.includes('music-api.gdstudio.xyz') || target.includes('/eapi/')) {
       throw new Error('simulated primary wy failure')
     }
     return fakeResponse({ code: 200, url: 'https://example.com/fallback-audio.mp3' })
