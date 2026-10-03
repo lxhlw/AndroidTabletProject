@@ -51,7 +51,7 @@ export function isLXMusicSourceCode(code: string): boolean {
     || code.includes('getMediaSource')
 
   return hasLXNamespace
-    && hasLXApiBinding
+    && hasLXEventProtocol
     && hasLXAction
     && !isCommonJSPlugin
 }
