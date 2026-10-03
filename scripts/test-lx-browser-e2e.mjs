@@ -60,6 +60,38 @@ try {
   console.log('✓ Real LX URL installed through the production UI: ' + installed.name)
   console.log('✓ Installed LX source persisted in musicfree-plugins')
 
+  // Re-install the same URL to verify upgrade/reinstall replaces the existing source
+  // instead of creating duplicate plugin entries.
+  await page.getByPlaceholder('音源網址', { exact: true }).fill(sourceUrl)
+  await page.getByRole('button', { name: '安裝', exact: true }).click()
+
+  const duplicateCheck = await page.waitForFunction(() => {
+    try {
+      const plugins = JSON.parse(localStorage.getItem('musicfree-plugins') || '[]')
+      const lxPlugins = plugins.filter((p) =>
+        p?.code?.includes('globalThis.lx') && p?.code?.includes('EVENT_NAMES.inited')
+      )
+      return lxPlugins.length === 1
+    } catch {
+      return false
+    }
+  })
+  if (!duplicateCheck) throw new Error('Reinstall created duplicate LX plugin entries')
+
+  const reinstallState = await page.evaluate(() => {
+    const plugins = JSON.parse(localStorage.getItem('musicfree-plugins') || '[]')
+    const lxPlugins = plugins.filter((p) =>
+      p?.code?.includes('globalThis.lx') && p?.code?.includes('EVENT_NAMES.inited')
+    )
+    return { count: lxPlugins.length, name: lxPlugins[0]?.name || '' }
+  })
+
+  if (reinstallState.count !== 1 || !reinstallState.name) {
+    throw new Error('LX reinstall persistence state is invalid')
+  }
+
+  console.log('✓ Reinstall/upgrade replaces the existing LX plugin without duplicates')
+
   await page.reload({ waitUntil: 'networkidle' })
 
   await page.waitForFunction(() => {
