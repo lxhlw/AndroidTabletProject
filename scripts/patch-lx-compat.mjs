@@ -62,8 +62,8 @@ writeFileSync(managerPath, manager)
 
 // Playback metadata: lazily resolve LX pic only when artwork is missing.
 let musicApp = readFileSync(musicAppPath, 'utf8')
-const metadataMarker = "      // 播放前就把 metadata 設好 —— Android 是在取得 audio focus 的那一刻讀它，\n      // 等 React effect 跑就太晚了（詳見 applyMediaMetadata)\n      applyMediaMetadata(item)\n"
-if (musicApp.includes(metadataMarker)) {
+const metadataNeedle = "      applyMediaMetadata(item)\n"
+if (musicApp.includes(metadataNeedle)) {
   const replacement = `      // LX 音源可能只提供 pic action；只有缺少 artwork 時才補抓，避免每首歌重複請求。
       let metadataItem = item
       if (!metadataItem.artwork && typeof pluginManager.getArtwork === 'function') {
@@ -79,7 +79,9 @@ if (musicApp.includes(metadataMarker)) {
       // 等 React effect 跑就太晚了（詳見 applyMediaMetadata）
       applyMediaMetadata(metadataItem)
 `
-  musicApp = musicApp.replace(metadataMarker, replacement)
+  musicApp = musicApp.replace(metadataNeedle, replacement)
+} else {
+  throw new Error('LX patch: playback metadata marker not found')
 }
 writeFileSync(musicAppPath, musicApp)
 
