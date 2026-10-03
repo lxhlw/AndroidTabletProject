@@ -2,7 +2,10 @@ import { readFileSync, writeFileSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import ts from '../whymusic-source/node_modules/typescript/lib/typescript.js'
+import ts from 'node:module'
+
+const tsModule = await import('typescript')
+const tsCompiler = tsModule.default || tsModule
 
 const sourceUrl = 'https://raw.githubusercontent.com/cdyUuu/lx-music-xinghai-source/main/xinghai-music-source.js'
 const sourceCode = await (await fetch(sourceUrl)).text()
@@ -15,11 +18,11 @@ for (const key of ['wy', 'tx', 'kg', 'kw', 'mg']) {
   }
 }
 
-const lxTsPath = 'whymusic-source/packages/web/src/core/plugin/lxCompat.ts'
+const lxTsPath = 'packages/web/src/core/plugin/lxCompat.ts'
 let tsSource = readFileSync(lxTsPath, 'utf8')
 tsSource = tsSource.replace("import { Plugin } from '../types'\\n", '')
 
-const transpiled = ts.transpileModule(tsSource, {
+const transpiled = tsCompiler.transpileModule(tsSource, {
   compilerOptions: {
     target: ts.ScriptTarget.ES2022,
     module: ts.ModuleKind.ESNext,
