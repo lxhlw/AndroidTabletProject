@@ -111,7 +111,7 @@ try {
 
 let sixyinMedia
 try {
-  const sixyinMedia = await sixyinPlugin.getMediaSource({
+  sixyinMedia = await sixyinPlugin.getMediaSource({
   id: 'sixyin-smoke-1',
   title: 'SixYin Smoke Test',
   artist: 'Test Artist',
