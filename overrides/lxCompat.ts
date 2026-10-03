@@ -391,6 +391,21 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
       throw last || new Error('LX 音源没有可用播放地址')
     },
 
+    async getArtwork(item: any) {
+      const source = item?.subSource
+      if (!source) return ''
+      try {
+        const value = await invoke(source, 'pic', {
+          type: null,
+          musicInfo: { ...(item?.lxInfo || {}), id: item?.id, songmid: item?.id },
+        })
+        if (typeof value === 'string') return value
+        return String(value?.url || value?.pic || value?.artwork || '')
+      } catch {
+        return ''
+      }
+    },
+
     async getLyric(item: any) {
       const source = item?.subSource
       if (!source) return { rawLrc: '' }
