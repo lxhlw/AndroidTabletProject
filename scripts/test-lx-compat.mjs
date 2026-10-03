@@ -61,6 +61,58 @@ for (const [label, code, expected] of detectorCases) {
 if (!isLXMusicSourceCode(sixyinCode)) throw new Error('LX detector rejected actual SixYin bundled source')
 console.log('✓ LX detector: actual SixYin bundled source')
 
+const sixyinPluginFetch = async (input, init = {}) => {
+  const url = String(input)
+  const method = String(init?.method || 'GET').toUpperCase()
+  requests.push({ url, method })
+  // SixYin is an obfuscated real-world LX source.  The bridge only needs a
+  // successful JSON-shaped media response here; the purpose of this test is
+  // to prove the exact production source can execute through our sandbox and
+  // request bridge, not to depend on third-party search availability.
+  const fakeUrl = 'https://example.com/sixyin-smoke-audio.mp3'
+  return new Response(JSON.stringify({
+    code: 200,
+    status: 200,
+    url: fakeUrl,
+    data: { url: fakeUrl },
+    result: { url: fakeUrl },
+    body: { url: fakeUrl },
+  }), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  })
+}
+
+const sixyinPlugin = buildLXPlugin(sixyinCode, {
+  pluginFetch: sixyinPluginFetch,
+  requireFn: (name) => { throw new Error('SixYin unexpected require: ' + name) },
+  console: fakeConsole,
+})
+
+const sixyinMedia = await sixyinPlugin.getMediaSource({
+  id: 'sixyin-smoke-1',
+  title: 'SixYin Smoke Test',
+  artist: 'Test Artist',
+  subSource: 'wy',
+  lxInfo: {
+    id: 'sixyin-smoke-1',
+    songmid: 'sixyin-smoke-1',
+    name: 'SixYin Smoke Test',
+    singer: 'Test Artist',
+  },
+  lxAlternatives: [],
+}, '128')
+
+if (!sixyinMedia?.url || sixyinMedia.source !== 'wy') {
+  throw new Error('Actual SixYin source could not execute musicUrl through LX bridge')
+}
+if (!requests.some(r => r.url.includes('/api/proxy?'))) {
+  throw new Error('Actual SixYin source did not exercise the WhyMusic proxy bridge')
+}
+
+console.log('✓ Actual SixYin bundled source loaded through buildLXPlugin')
+console.log('✓ Actual SixYin musicUrl executed successfully through request bridge')
+
 unlinkSync(tempPath)
 
 const requests = []
