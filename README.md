@@ -151,6 +151,38 @@ A local build requires **JDK 8**.
 
 Official signed Release APKs should be downloaded from GitHub Releases.
 
+## WhyMusic / LX Music Source Compatibility
+
+This repository also deploys the WhyMusic web player and its LX Music source compatibility layer.
+
+### Production WhyMusic
+
+- **WhyMusic website:** https://whymusic-l101.pages.dev/
+- **Official WhyMusic plugin:** https://whymusic-l101.pages.dev/plugins/whymusic.js
+
+### Install an LX Music source
+
+Open the WhyMusic website, go to **Settings → Install source from URL**, and paste an LX Music source JavaScript URL.
+
+The player accepts LX-style sources that expose the LX runtime protocol (globalThis.lx / window.lx and EVENT_NAMES.inited) and loads them directly through the compatibility layer. Installed source code is persisted in browser storage and restored after refresh.
+
+Verified compatibility includes:
+
+- LX source initialization
+- musicUrl playback for wy / tx / kg / kw / mg
+- LX request → WhyMusic proxy bridge
+- lyric and cover (pic) actions when supplied by the source
+- automatic source fallback when a child source fails
+- search aggregation that keeps successful sources when another source fails
+- reinstall/update without duplicate plugin entries
+- multiple real-world LX source formats, including a minimal musicUrl-only source
+
+The WhyMusic deployment is validated through GitHub Actions, including a real browser install → persistence → reload → search E2E test.
+
+### Current search note
+
+WhyMusic performs cross-source search aggregation in its own player/worker layer. LX source compatibility is not limited to the search implementation; LX sources are used directly for their playback, lyric, cover, request, and initialization protocols.
+
 ## Project
 
 Package:
