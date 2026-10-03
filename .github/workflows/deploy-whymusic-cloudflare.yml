@@ -1,0 +1,59 @@
+name: Deploy WhyMusic to Cloudflare Pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout L101 repository
+        uses: actions/checkout@v6
+
+      - name: Checkout WhyMusic
+        uses: actions/checkout@v6
+        with:
+          repository: whypuss/whymusic
+          path: whymusic-source
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Enable pnpm
+        working-directory: whymusic-source
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.18.0 --activate
+          pnpm --version
+
+      - name: Install WhyMusic dependencies
+        working-directory: whymusic-source
+        run: pnpm install --frozen-lockfile
+
+      - name: Build WhyMusic for Cloudflare Pages
+        working-directory: whymusic-source
+        run: pnpm build:cf
+
+      - name: Ensure Cloudflare Pages project exists
+        working-directory: whymusic-source
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm wrangler pages project create whymusic-l101 --production-branch main || true
+
+      - name: Deploy WhyMusic
+        working-directory: whymusic-source
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm wrangler pages deploy packages/web/dist             --project-name=whymusic-l101             --branch=main             --commit-dirty=true
