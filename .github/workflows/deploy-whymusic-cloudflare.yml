@@ -46,6 +46,32 @@ jobs:
 
           path = Path("packages/web/worker/why.js")
           text = path.read_text()
+          # 歌词是附加信息：GD lyric 上游失败时返回空歌词，而不是让整个 API 变成 500。
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          path = Path("packages/web/worker/why.js")
+          text = path.read_text()
+          pattern = re.compile(r"async function getWhyMusicLyric\(lyricId, source\) \{.*?\n\}\n\nasync function getWhyMusicPic", re.S)
+          replacement = '''async function getWhyMusicLyric(lyricId, source) {
+            if (source === AUDIOMACK_SOURCE) return { lyric: '', tlyric: '' }
+            try {
+              const data = await gdRequest('lyric', { source, id: lyricId })
+              return { lyric: data?.lyric || '', tlyric: data?.tlyric || '' }
+            } catch (err) {
+              console.error('[why] lyric unavailable:', err?.message)
+              return { lyric: '', tlyric: '' }
+            }
+          }
+
+          async function getWhyMusicPic'''
+          text, n = pattern.subn(replacement, text, count=1)
+          if n != 1:
+              raise SystemExit("getWhyMusicLyric function not found")
+          path.write_text(text)
+          print("✓ Lyric failure now degrades to empty lyric payload")
+          PY
+
           # GD 解析失败时，网易云歌曲直接使用官方 outer media URL 作为播放兜底。
           # 该地址是稳定的 HTTPS 入口，不依赖 GD 的 url 解析服务。
           media_marker = "async function getWhySubSourceUrl(songId, source, bitrate = GD_BITRATE) {"
