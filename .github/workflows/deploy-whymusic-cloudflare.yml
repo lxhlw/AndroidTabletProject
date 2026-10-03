@@ -218,6 +218,20 @@ jobs:
           grep -q 'globalThis.lx' "$lx_proxy_file"
           grep -q 'EVENT_NAMES.inited' "$lx_proxy_file"
           echo "✓ Production proxy can fetch and return the real LX source code"
+          echo "Verifying production frontend bundle contains LX compatibility..."
+          homepage_html="$(curl -fsSL --max-time 30 "$BASE_URL/")"
+          bundle_path="$(printf '%s\n' "$homepage_html" | sed -n 's/.*src="\([^"]*\.js\)".*/\1/p' | head -n 1)"
+          test -n "$bundle_path"
+          case "$bundle_path" in
+            http*) bundle_url="$bundle_path" ;;
+            /*) bundle_url="$BASE_URL$bundle_path" ;;
+            *) bundle_url="$BASE_URL/$bundle_path" ;;
+          esac
+          bundle_js="$(curl -fsSL --max-time 30 "$bundle_url")"
+          echo "$bundle_js" | grep -q 'EVENT_NAMES.inited'
+          echo "$bundle_js" | grep -q 'buildLXPlugin'
+          echo "$bundle_js" | grep -q 'isLXMusicSourceCode'
+          echo "✓ Production frontend bundle contains LX installer/runtime compatibility"
           echo "Running real LX source compatibility smoke test..."
           export WHYMUSIC_TYPESCRIPT="$(find whymusic-source/node_modules . -path "*/typescript/lib/typescript.js" -type f -print -quit 2>/dev/null)"
           test -n "$WHYMUSIC_TYPESCRIPT"
