@@ -186,6 +186,49 @@ export function buildLXPlugin(code: string, deps: LXCompatDeps): Plugin {
         }
 
         const target = String(targetUrl)
+
+        // SixYin v1.2.1 仍依賴舊版 lx.itooi.cn/openApi URL 路由。
+        // 該服務目前會返回 HTML，無法再提供播放地址；把這個「舊 LX 路由」
+        // 映射到本站已驗證可用的 /api/why-url，並還原成 SixYin 期待的
+        // "url=https://..." 純文本响应，避免修改第三方音源本身。
+        const legacyItooi = /^https?:\/\/lx\.itooi\.cn\/openApi\/route\/lx\/v2\/url\/([^/]+)\/([^/?]+)\/([^/?]+)(?:\?[^#]*)?$/i.exec(target)
+        if (legacyItooi) {
+          const source = String(legacyItooi[1] || '').toLowerCase()
+          const id = String(legacyItooi[2] || '')
+          const quality = String(legacyItooi[3] || '').toLowerCase()
+          const brMap: Record<string, string> = {
+            '128k': '128',
+            '192k': '192',
+            '320k': '320',
+            'flac': '740',
+            'flac24bit': '999',
+            'hires': '999',
+          }
+          const br = brMap[quality] || '128'
+          const compatUrl = LX_COMPAT_API + '/api/why-url?source=' + encodeURIComponent(source)
+            + '&id=' + encodeURIComponent(id)
+            + '&br=' + encodeURIComponent(br)
+          const compatResponse = await deps.pluginFetch(compatUrl, { method: 'GET', cache: 'no-store' })
+          const compatText = await compatResponse.text()
+          if (!compatResponse.ok) {
+            throw new Error('LX legacy URL bridge HTTP ' + compatResponse.status + ': ' + compatText.slice(0, 300))
+          }
+          let compatBody: any = null
+          try { compatBody = JSON.parse(compatText) } catch {}
+          if (!compatBody?.url) {
+            throw new Error('LX legacy URL bridge returned no media URL')
+          }
+          callback(null, {
+            statusCode: 200,
+            statusMessage: 'OK',
+            headers: { 'content-type': 'text/plain; charset=utf-8' },
+            bytes: compatBody.url.length + 4,
+            raw: new TextEncoder().encode('url=' + compatBody.url),
+            body: 'url=' + compatBody.url,
+          }, 'url=' + compatBody.url)
+          return
+        }
+
         const requestUrl = /^https?:\/\//i.test(target)
           ? LX_COMPAT_API + '/api/proxy?url=' + encodeURIComponent(target)
             + '&method=' + encodeURIComponent(method)
