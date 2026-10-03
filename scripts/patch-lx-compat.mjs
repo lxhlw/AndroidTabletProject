@@ -143,7 +143,7 @@ if (!why.includes('async function searchWhyMusicPlatform(')) {
     '  if (!q) return []',
     '  if (source === "wy" || source === "netease") {',
     '    const offset = (p - 1) * n',
-    '    const data = await neteaseFetch("/api/search/get/web?s=" + encodeURIComponent(q) + "&type=1&limit=" + n + "&offset=" + offset)',
+    '    const data = await neteaseFetch("/api/search/get?s=" + encodeURIComponent(q) + "&type=1&limit=" + n + "&offset=" + offset)',
     '    return ((data?.result?.songs) || []).map(raw => lxNormalizeSearchItem("wy", raw)).filter(Boolean)',
     '  }',
     '  if (source === "tx" || source === "qq") {',
