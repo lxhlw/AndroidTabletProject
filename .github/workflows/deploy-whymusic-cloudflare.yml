@@ -37,6 +37,13 @@ jobs:
           corepack prepare pnpm@10.18.0 --activate
           pnpm --version
 
+      - name: Enable pnpm
+        working-directory: whymusic-source
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.18.0 --activate
+          pnpm --version
+
       - name: Install WhyMusic dependencies
         working-directory: whymusic-source
         run: pnpm install --frozen-lockfile
@@ -79,3 +86,39 @@ jobs:
             --branch=main \
             --commit-dirty=true \
             --no-bundle
+
+      - name: Smoke test production site
+        env:
+          BASE_URL: https://whymusic-l101.pages.dev
+        run: |
+          set -euo pipefail
+
+          echo "Waiting for production deployment..."
+          for i in {1..12}; do
+            if curl -fsS --max-time 10 "$BASE_URL/" -o /tmp/whymusic-home.html; then
+              echo "✓ Homepage reachable"
+              break
+            fi
+            if [ "$i" -eq 12 ]; then
+              echo "✘ Homepage did not become reachable"
+              exit 1
+            fi
+            sleep 5
+          done
+
+          plugin="$(curl -fsS --max-time 15 "$BASE_URL/plugins/whymusic.js")"
+          printf '%s\n' "$plugin" | grep -q 'module.exports'
+          printf '%s\n' "$plugin" | grep -q "name: 'WhyMusic'"
+          echo "✓ Production official plugin is reachable and valid"
+
+          version="$(curl -fsS --max-time 15 "$BASE_URL/api/version")"
+          echo "$version" | jq -e '.worker' >/dev/null
+          echo "✓ /api/version responds: $version"
+
+          search="$(curl -fsS --max-time 30 --get "$BASE_URL/api/why-search" \
+            --data-urlencode 'q=周杰伦' \
+            --data-urlencode 'type=music' \
+            --data-urlencode 'page=1' \
+            --data-urlencode 'count=1')"
+          echo "$search" | jq -e '.data | type == "array"' >/dev/null
+          echo "✓ /api/why-search responds with a data array"
