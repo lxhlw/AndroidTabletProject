@@ -61,6 +61,18 @@ for (const [label, code, expected] of detectorCases) {
 if (!isLXMusicSourceCode(sixyinCode)) throw new Error('LX detector rejected actual SixYin bundled source')
 console.log('✓ LX detector: actual SixYin bundled source')
 
+unlinkSync(tempPath)
+
+const requests = []
+const fakeConsole = {
+  log() {},
+  warn() {},
+  info() {},
+  error() {},
+  group() {},
+  groupEnd() {},
+}
+
 const sixyinPluginFetch = async (input, init = {}) => {
   const url = String(input)
   const method = String(init?.method || 'GET').toUpperCase()
@@ -112,18 +124,6 @@ if (!requests.some(r => r.url.includes('/api/proxy?'))) {
 
 console.log('✓ Actual SixYin bundled source loaded through buildLXPlugin')
 console.log('✓ Actual SixYin musicUrl executed successfully through request bridge')
-
-unlinkSync(tempPath)
-
-const requests = []
-const fakeConsole = {
-  log() {},
-  warn() {},
-  info() {},
-  error() {},
-  group() {},
-  groupEnd() {},
-}
 
 const fakeResponse = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
