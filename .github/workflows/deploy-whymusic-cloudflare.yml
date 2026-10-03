@@ -259,3 +259,17 @@ jobs:
           size="$(wc -c < /tmp/whymusic-audio.bin)"
           test "$size" -ge 100
           echo "✓ Resolved media URL returned audio bytes (${size} bytes sample)"
+          lyric_id="$(echo "$first" | jq -r '.lyricId // .id')"
+          lyric_source="$(echo "$first" | jq -r '.subSource // "netease"')"
+          lyric="$(curl -fsS --max-time 30 --get "$BASE_URL/api/why-lyric" \
+            --data-urlencode "id=$lyric_id" \
+            --data-urlencode "source=$lyric_source")"
+          echo "$lyric" | jq -e 'type == "object" and has("lyric") and has("tlyric")' >/dev/null
+          echo "✓ /api/why-lyric responds with lyric payload"
+
+          recommend="$(curl -fsS --max-time 45 --get "$BASE_URL/api/recommend" \
+            --data-urlencode 'cat=cantonese' \
+            --data-urlencode 'limit=5' \
+            --data-urlencode 'seed=1')"
+          echo "$recommend" | jq -e '.data | type == "array"' >/dev/null
+          echo "✓ /api/recommend returns a data array"
